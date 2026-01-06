@@ -11,6 +11,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+.DS_Store/
 
 # IntelliJ related
 *.iml
@@ -43,4 +44,3 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-.DS_Store
