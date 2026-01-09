@@ -180,6 +180,7 @@ class _HomePageState extends State<HomePage> {
                                 borderRadius: BorderRadius.circular(24),
                                 boxShadow: [
                                   BoxShadow(
+                                    // ignore: deprecated_member_use
                                     color: Colors.black.withOpacity(0.1),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
@@ -193,7 +194,7 @@ class _HomePageState extends State<HomePage> {
                         // Footer
                         const SizedBox(height: 24),
                         Text(
-                          '©2025 Tung Lam created',
+                          '©2026 Tung Lam created',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[400],
