@@ -1,5 +1,5 @@
 name: cooking_daddy
-description: "A new Flutter project."
+description: "This app aims to support users who are struggling to cook. It provides very specific details down to each step. Also, the app takes the very necessary informations that really matter to newbie chefs."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -12,11 +12,22 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^6.3.3
 
+  isar: ^3.1.0
+  isar_flutter_libs: ^3.1.0
+  shared_preferences: ^2.2.0
+  flutter_local_notifications: ^17.0.0
+
+
+# ===============================DEPENDENCIES===============================
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.13.1
+  isar_generator: ^3.1.0
+  build_runner: ^2.4.0
+  path_provider: ^2.1.0
 
 flutter:
   uses-material-design: true
@@ -35,7 +46,12 @@ flutter:
         - asset: fonts/static/PixelifySans-Bold.ttf
           weight: 700
 
+  # ===============================DEV_DEPENDENCIES===============================
+
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icons/officialLogo.png"
+
+  
+

@@ -1,4 +1,7 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
   const RecipeEditorScreen({super.key});
@@ -9,13 +12,10 @@ class RecipeEditorScreen extends StatefulWidget {
 
 class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   final TextEditingController _urlController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _ingredientsController = TextEditingController();
   final TextEditingController _toolsController = TextEditingController();
-
-  List<StepData> steps = [StepData()]; // Start with one step
-  String selectedCategory = 'Category';
-
-  // Separated categories list - can be replaced with database data later
+  // List of categories
   final List<String> categories = [
     'Homecook',
     'Lazy meals',
@@ -25,14 +25,15 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     'Dessert',
   ];
 
+  List<StepData> steps = [StepData()]; // Start with one step
+  String? selectedCategory;
+
   @override
   void dispose() {
+    _nameController.dispose();
     _urlController.dispose();
     _ingredientsController.dispose();
     _toolsController.dispose();
-    for (var step in steps) {
-      step.dispose();
-    }
     super.dispose();
   }
 
@@ -45,7 +46,6 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   void _removeStep(int index) {
     if (steps.length > 1) {
       setState(() {
-        steps[index].dispose();
         steps.removeAt(index);
       });
     }
@@ -54,17 +54,17 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFEAEA),
+      backgroundColor: const Color(0xFFFFEAEA), // Updated background color
       body: SafeArea(
         bottom: false,
         left: false,
         right: false,
         child: Column(
           children: [
-            // Header
+            // Header - Updated AppBar color
             Container(
               width: double.infinity,
-              color: const Color(0xFFFFA4A4),
+              color: const Color(0xFFFFA4A4), // Updated AppBar color
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Stack(
                 children: [
@@ -82,7 +82,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
-                  // Title - CENTERED
+                  // Title
                   Center(
                     child: Column(
                       children: [
@@ -171,6 +171,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     ),
                     const SizedBox(height: 24),
 
+                    _buildTextField('Name*', _nameController),
+                    const SizedBox(height: 16),
+
                     // Ingredients Field
                     _buildTextField('Ingredients', _ingredientsController),
                     const SizedBox(height: 16),
@@ -184,121 +187,174 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                       return _buildStepCard(index);
                     }),
 
-                    const SizedBox(height: 120), // Space for sticky bottom bar
-                  ],
-                ),
-              ),
-            ),
-            // Sticky Bottom Bar
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEAEA),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Add Step and Category Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Add Step Button
-                        ElevatedButton(
-                          onPressed: _addStep,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
+                    const SizedBox(height: 16),
+
+                    // Add Step Button
+                    // Sticky Bottom Bar
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEAEA),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 16,
+                            offset: const Offset(0, -4),
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                      child: SafeArea(
+                        top: false,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Add Step and Category Row
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Add Step Button
+                                ElevatedButton(
+                                  onPressed: _addStep,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  child: const Text(
+                                    'Add step',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                                // Category Dropdown
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: DropdownButton<String>(
+                                    value: selectedCategory,
+                                    hint: const Text(
+                                      'Category',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ), // This shows when value is null
+                                    underline: const SizedBox(),
+                                    icon: const Icon(Icons.arrow_drop_down),
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                      fontFamily: 'PixelifySans',
+                                    ),
+                                    items: categories.map((String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      setState(() {
+                                        selectedCategory = newValue;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            elevation: 2,
-                          ),
-                          child: const Text(
-                            'Add step',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
-                        // Category Dropdown
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                            const SizedBox(height: 12),
+                            // Done Button
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  // Save recipe logic here
+                                  if (_nameController.text.trim().isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Recipe name is required',
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  // Check all steps for empty instructions
+                                  for (var step in steps) {
+                                    if (step.instructionController.text
+                                        .trim()
+                                        .isEmpty) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'All instructions are required',
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                  }
+                                  // You might want to validate selectedCategory is not null
+                                  if (selectedCategory == null) {
+                                    // Show error: Please select a category
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Please select a category',
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  Navigator.pop(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFB8E6F5),
+                                  foregroundColor: Colors.black,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: const Text(
+                                  'Done!',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
-                            ],
-                          ),
-                          child: DropdownButton<String>(
-                            value: selectedCategory,
-                            underline: const SizedBox(),
-                            icon: const Icon(Icons.arrow_drop_down),
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 16,
-                              fontFamily: 'PixelifySans',
                             ),
-                            items: categories.map((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                selectedCategory = newValue!;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // Done Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Save recipe logic here
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFB8E6F5),
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: const Text(
-                          'Done!',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          ],
                         ),
                       ),
                     ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -339,13 +395,6 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,7 +416,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _buildStepField('Instruction', steps[index].instructionController),
+          _buildStepField('Instruction*', steps[index].instructionController),
           const SizedBox(height: 8),
           _buildStepField('Heat', steps[index].heatController),
           const SizedBox(height: 8),
@@ -382,6 +431,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                 child: TextField(
                   controller: steps[index].timerMinController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   textAlign: TextAlign.center,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),

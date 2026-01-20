@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:math';
+import '../data/repositories/recipe_repository.dart';
+import '../data/models/recipe.dart';
 
 void main() {
   runApp(const CookingDaddyApp());
@@ -26,16 +29,58 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final RecipeRepository _repository = RecipeRepository();
+
+  bool isLoading = true;
+  late String randomQuote;
+  List<Recipe> recipes = [];
 
   // List of categories
   final List<String> categories = [
-    'Homecook',
-    'Lazy meals',
     'Breakfast',
     'Lunch',
     'Dinner',
+    'Lazy meals',
     'Dessert',
+    'Drinks',
   ];
+
+  final List<String> quotes = [
+    'just like how ur mom makes it',
+    'oui chef!',
+    'cause dads can cook too',
+    'fuiyoooooooo',
+    'please don\'t mess it up',
+    'about to be an influencer',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _pickRandomQuote();
+    Future.delayed(Duration(milliseconds: 100));
+    _loadRecipes();
+  }
+
+  // This one is used to pick a random quote from the list as user opens the screen
+  void _pickRandomQuote() {
+    setState(() {
+      randomQuote = quotes[Random().nextInt(quotes.length)];
+    });
+  }
+
+  Future<void> _loadRecipes() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    final fetchedRecipes = await _repository.getAllRecipes();
+
+    setState(() {
+      recipes = fetchedRecipes;
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,8 +183,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'just like how ur mom makes it',
+                  Text(
+                    randomQuote,
                     style: TextStyle(fontSize: 20, color: Colors.black),
                   ),
                 ],
@@ -195,41 +240,91 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 32),
                           // Recipe Cards
-                          ...List.generate(
-                            6,
-                            (index) => Padding(
-                              padding: const EdgeInsets.only(bottom: 24.0),
-                              child: GestureDetector(
-                                onTap: () {
-                                  // Navigate to cooking session
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/cookingSession',
-                                  );
-                                },
-                                child: Container(
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
+                          isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : recipes.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    children: [
+                                      const SizedBox(height: 40),
+                                      Text(
+                                        'No recipes yet!',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Tap "Add recipe!" to create your first recipe',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[500],
+                                        ),
                                       ),
                                     ],
                                   ),
-                                  child: Center(
-                                    child: Text(
-                                      'Recipe ${index + 1}',
-                                      style: const TextStyle(fontSize: 18),
-                                    ),
-                                  ),
+                                )
+                              : Column(
+                                  children: recipes.map((recipe) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 24.0,
+                                      ),
+                                      child: GestureDetector(
+                                        onTap: () async {
+                                          await Navigator.pushNamed(
+                                            context,
+                                            '/recipeDetail',
+                                            arguments: recipe.id,
+                                          );
+                                          _pickRandomQuote();
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.all(20),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              24,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(
+                                                  0.1,
+                                                ),
+                                                blurRadius: 10,
+                                                offset: const Offset(0, 4),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              // Recipe Name
+                                              Text(
+                                                recipe.name,
+                                                style: const TextStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              // Category
+                                              Text(
+                                                recipe.categoryId.toString(),
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
                                 ),
-                              ),
-                            ),
-                          ),
                           // Footer
                           const SizedBox(height: 24),
                           Text(
@@ -262,8 +357,11 @@ class _HomePageState extends State<HomePage> {
                     top: 24,
                     right: 24,
                     child: ElevatedButton(
-                      onPressed: () =>
-                          Navigator.pushNamed(context, '/recipeEditor'),
+                      onPressed: () async {
+                        await Navigator.pushNamed(context, '/recipeEditor');
+                        _pickRandomQuote();
+                        _loadRecipes();
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
