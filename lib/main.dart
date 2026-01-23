@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+// import 'package:path_provider/path_provider.dart';
 import 'screens/home.dart';
 import 'screens/recipe_editor.dart';
 import 'data/datasources/isar_datasource.dart';
 import 'data/models/recipe.dart';
+// import 'data/models/category.dart';
 import 'screens/cooking_session.dart';
 import 'services/notification.dart';
 import 'screens/recipe_detail.dart';
+// import 'package:isar/isar.dart';
 
 void main() async {
+  // late Isar isar;
   print('MAIN: Starting app...');
   WidgetsFlutterBinding.ensureInitialized();
+
+  // final dir = await getApplicationDocumentsDirectory();
+  // isar = await Isar.open([CategorySchema, RecipeSchema], directory: dir.path);
 
   print('MAIN: Initializing Isar...');
   await IsarDatasource.initialize();
