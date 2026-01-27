@@ -1,3 +1,4 @@
+import 'package:cooking_daddy/data/models/quotes.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 import '../data/repositories/recipe_repository.dart';
@@ -45,14 +46,41 @@ class _HomePageState extends State<HomePage> {
     'Drinks',
   ];
 
-  final List<String> quotes = [
-    'just like how ur mom makes it',
-    'oui chef!',
-    'cause dads can cook too',
-    'fuiyoooooooo',
-    'please don\'t mess it up',
-    'about to be an influencer',
-  ];
+  // final List<String> quotes = [
+  //   'just like how ur mom makes it',
+  //   'oui chef!',
+  //   'cause dads can cook too',
+  //   'fuiyoooooooo',
+  //   'please don\'t mess it up',
+  //   'about to be an influencer',
+  // ];
+
+  void _showDeleteConfirmation(Recipe recipe) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Recipe'),
+          content: Text('Are you sure you want to delete "${recipe.name}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Delete the recipe
+                await _repository.deleteRecipe(recipe.id);
+                Navigator.pop(context); // Close dialog
+                _loadRecipes(); // Reload the list
+              },
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -65,7 +93,7 @@ class _HomePageState extends State<HomePage> {
   // This one is used to pick a random quote from the list as user opens the screen
   void _pickRandomQuote() {
     setState(() {
-      randomQuote = quotes[Random().nextInt(quotes.length)];
+      randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
     });
   }
 
@@ -240,6 +268,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 32),
                           // Recipe Cards
+                          // Recipe Cards
                           isLoading
                               ? const Center(child: CircularProgressIndicator())
                               : recipes.isEmpty
@@ -267,19 +296,14 @@ class _HomePageState extends State<HomePage> {
                                 )
                               : Column(
                                   children: recipes.map((recipe) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 24.0,
-                                      ),
-                                      child: GestureDetector(
-                                        onTap: () async {
-                                          await Navigator.pushNamed(
-                                            context,
-                                            '/recipeDetail',
-                                            arguments: recipe.id,
-                                          );
-                                          _pickRandomQuote();
-                                        },
+                                    return Center(
+                                      child: Container(
+                                        width:
+                                            MediaQuery.of(context).size.width *
+                                            0.9,
+                                        margin: const EdgeInsets.only(
+                                          bottom: 24.0,
+                                        ),
                                         child: Container(
                                           padding: const EdgeInsets.all(20),
                                           decoration: BoxDecoration(
@@ -297,26 +321,119 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                             ],
                                           ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                          child: Row(
                                             children: [
-                                              // Recipe Name
-                                              Text(
-                                                recipe.name,
-                                                style: const TextStyle(
-                                                  fontSize: 22,
-                                                  fontWeight: FontWeight.bold,
+                                              // Recipe info (tappable)
+                                              Expanded(
+                                                child: GestureDetector(
+                                                  onTap: () async {
+                                                    print(
+                                                      'Tapping recipe: ${recipe.name}, ID: ${recipe.id}',
+                                                    );
+                                                    await Navigator.pushNamed(
+                                                      context,
+                                                      '/recipeDetail',
+                                                      arguments: recipe.id,
+                                                    );
+                                                    _pickRandomQuote();
+                                                  },
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      // Recipe Name (Row 1)
+                                                      Text(
+                                                        recipe.name,
+                                                        style: const TextStyle(
+                                                          fontSize: 24,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: Colors.black,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      // Category and steps (Row 2)
+                                                      Text(
+                                                        '${recipe.category}, ${recipe.steps.length} steps',
+                                                        style: TextStyle(
+                                                          fontSize: 16,
+                                                          color:
+                                                              Colors.grey[500],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
-                                              const SizedBox(height: 8),
-                                              // Category
-                                              Text(
-                                                recipe.categoryId.toString(),
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  color: Colors.grey[600],
+                                              // Edit menu button
+                                              PopupMenuButton<String>(
+                                                icon: const Icon(
+                                                  Icons.more_vert,
+                                                  size: 28,
+                                                  color: Colors.black,
                                                 ),
+                                                onSelected: (value) async {
+                                                  if (value == 'edit') {
+                                                    // Navigate to recipe editor with recipe data
+                                                    await Navigator.pushNamed(
+                                                      context,
+                                                      '/recipeEditor',
+                                                      arguments: recipe,
+                                                    );
+                                                    // Reload recipes after editing
+                                                    _loadRecipes();
+                                                  } else if (value ==
+                                                      'delete') {
+                                                    // Show delete confirmation
+                                                    _showDeleteConfirmation(
+                                                      recipe,
+                                                    );
+                                                  }
+                                                },
+                                                itemBuilder:
+                                                    (BuildContext context) => [
+                                                      const PopupMenuItem<
+                                                        String
+                                                      >(
+                                                        value: 'edit',
+                                                        child: Row(
+                                                          children: [
+                                                            Icon(
+                                                              Icons.edit,
+                                                              color:
+                                                                  Colors.black,
+                                                            ),
+                                                            SizedBox(width: 12),
+                                                            Text('Edit'),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      const PopupMenuItem<
+                                                        String
+                                                      >(
+                                                        value: 'delete',
+                                                        enabled:
+                                                            false, // Temporarily disabled
+                                                        child: Row(
+                                                          children: [
+                                                            Icon(
+                                                              Icons.delete,
+                                                              color:
+                                                                  Colors.grey,
+                                                            ),
+                                                            SizedBox(width: 12),
+                                                            Text(
+                                                              'Delete',
+                                                              style: TextStyle(
+                                                                color:
+                                                                    Colors.grey,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
                                               ),
                                             ],
                                           ),

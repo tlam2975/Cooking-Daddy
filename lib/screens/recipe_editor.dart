@@ -1,10 +1,16 @@
-// ignore_for_file: deprecated_member_use
+import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:cooking_daddy/data/models/quotes.dart';
+
+import '../data/models/recipe.dart';
+import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
+import '../data/repositories/recipe_repository.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
-  const RecipeEditorScreen({super.key});
+  final Recipe? recipe; // Optional recipe for editing
+
+  const RecipeEditorScreen({super.key, this.recipe});
 
   @override
   State<RecipeEditorScreen> createState() => _RecipeEditorScreenState();
@@ -24,6 +30,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     'Dinner',
     'Dessert',
   ];
+
+  late String randomQuote;
+
+  final RecipeRepository _repository = RecipeRepository();
 
   List<StepData> steps = [StepData()]; // Start with one step
   String? selectedCategory;
@@ -48,6 +58,42 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       setState(() {
         steps.removeAt(index);
       });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
+
+    // Pre-fill data if editing
+    if (widget.recipe != null) {
+      _nameController.text = widget.recipe!.name;
+      _urlController.text = widget.recipe!.url ?? '';
+      _ingredientsController.text = widget.recipe!.ingredients;
+      _toolsController.text = widget.recipe!.tools;
+      selectedCategory = widget.recipe!.category;
+
+      // Pre-fill steps
+      steps = widget.recipe!.steps.map((step) {
+        final stepData = StepData();
+        stepData.instructionController.text = step.instruction;
+        stepData.heatController.text = step.heat ?? '';
+        stepData.seasoningsController.text = step.seasonings ?? '';
+        stepData.timerMinController.text = step.timer != null
+            ? (step.timer! ~/ 60).toString()
+            : '';
+        stepData.timerSecController.text = step.timer != null
+            ? (step.timer! % 60).toString()
+            : '';
+        stepData.notesController.text = step.notes ?? '';
+        stepData.lookForController.text = step.whatToLookFor;
+        return stepData;
+      }).toList();
+
+      if (steps.isEmpty) {
+        steps = [StepData()]; // Ensure at least one step
+      }
     }
   }
 
@@ -96,8 +142,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Gordon Ramsey?',
+                        Text(
+                          randomQuote,
                           style: TextStyle(fontSize: 20, color: Colors.black),
                         ),
                       ],
@@ -286,49 +332,146 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: () {
-                                  // Save recipe logic here
-                                  if (_nameController.text.trim().isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Recipe name is required',
+                                onPressed: () async {
+                                  try {
+                                    // Validate required fields
+                                    if (_nameController.text.isEmpty) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Please enter a recipe name',
+                                          ),
+                                          backgroundColor: Colors.red,
                                         ),
-                                      ),
-                                    );
-                                    return;
-                                  }
+                                      );
+                                      return;
+                                    }
 
-                                  // Check all steps for empty instructions
-                                  for (var step in steps) {
-                                    if (step.instructionController.text
-                                        .trim()
-                                        .isEmpty) {
+                                    if (selectedCategory == null ||
+                                        selectedCategory == 'Category') {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Please select a category',
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    // Save recipe logic here
+                                    final recipe = Recipe(
+                                      name: _nameController.text,
+                                      url: _urlController.text.isEmpty
+                                          ? null
+                                          : _urlController.text,
+                                      ingredients: _ingredientsController.text,
+                                      tools: _toolsController.text,
+                                      category: selectedCategory!,
+                                      createdDate:
+                                          widget.recipe?.createdDate ??
+                                          DateTime.now(),
+                                      steps: steps.map((step) {
+                                        final timerMin =
+                                            int.tryParse(
+                                              step.timerMinController.text,
+                                            ) ??
+                                            0;
+                                        final timerSec =
+                                            int.tryParse(
+                                              step.timerSecController.text,
+                                            ) ??
+                                            0;
+                                        final totalSeconds =
+                                            (timerMin * 60) + timerSec;
+
+                                        return Step(
+                                          instruction:
+                                              step.instructionController.text,
+                                          heat: step.heatController.text.isEmpty
+                                              ? null
+                                              : step.heatController.text,
+                                          seasonings:
+                                              step
+                                                  .seasoningsController
+                                                  .text
+                                                  .isEmpty
+                                              ? null
+                                              : step.seasoningsController.text,
+                                          timer: totalSeconds > 0
+                                              ? totalSeconds
+                                              : null,
+                                          notes:
+                                              step.notesController.text.isEmpty
+                                              ? null
+                                              : step.notesController.text,
+                                          whatToLookFor:
+                                              step.lookForController.text,
+                                          index: steps.indexOf(step),
+                                        );
+                                      }).toList(),
+                                    );
+
+                                    if (widget.recipe != null) {
+                                      // Update existing recipe
+                                      recipe.id = widget.recipe!.id;
+                                      await _repository.updateRecipe(recipe);
+
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Recipe updated successfully!',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      // Add new recipe
+                                      await _repository.addRecipe(recipe);
+
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Recipe added successfully!',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    }
+
+                                    if (mounted) {
+                                      Navigator.pop(context);
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'All instructions are required',
+                                            'Error: ${e.toString()}',
                                           ),
+                                          backgroundColor: Colors.red,
+                                          duration: const Duration(seconds: 3),
                                         ),
                                       );
-                                      return;
                                     }
                                   }
-                                  // You might want to validate selectedCategory is not null
-                                  if (selectedCategory == null) {
-                                    // Show error: Please select a category
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Please select a category',
-                                        ),
-                                      ),
-                                    );
-                                    return;
-                                  }
-                                  Navigator.pop(context);
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFFB8E6F5),

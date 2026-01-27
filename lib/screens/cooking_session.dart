@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide Step;
 import 'dart:math';
 import 'dart:async';
 import '../data/models/recipe.dart';
+import '../data/models/quotes.dart';
 
 class CookingSessionScreen extends StatefulWidget {
   final Recipe recipe;
@@ -21,19 +22,19 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
   int remainingSeconds = 0;
   bool timerRunning = false;
 
-  final List<String> quotes = [
-    'just like how ur mom makes it',
-    'oui chef!',
-    'cause dads can cook too',
-    'fuiyoooooooo',
-    "haiyaaa don't mess it up",
-    'about to be an influencer',
-  ];
+  // final List<String> quotes = [
+  //   'just like how ur mom makes it',
+  //   'oui chef!',
+  //   'cause dads can cook too',
+  //   'fuiyoooooooo',
+  //   "haiyaaa don't mess it up",
+  //   'about to be an influencer',
+  // ];
 
   @override
   void initState() {
     super.initState();
-    randomQuote = quotes[Random().nextInt(quotes.length)];
+    randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
   }
 
   @override
