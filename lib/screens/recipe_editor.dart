@@ -29,6 +29,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     'Lunch',
     'Dinner',
     'Dessert',
+    'Drinks',
   ];
 
   late String randomQuote;
@@ -532,6 +533,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   }
 
   Widget _buildStepCard(int index) {
+    // String label;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -559,7 +561,11 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _buildStepField('Instruction*', steps[index].instructionController),
+          _buildStepField(
+            'Instruction*',
+            steps[index].instructionController,
+            // isRequired: true,
+          ),
           const SizedBox(height: 8),
           _buildStepField('Heat', steps[index].heatController),
           const SizedBox(height: 8),
@@ -600,7 +606,11 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
           const SizedBox(height: 8),
           _buildStepField('Notes', steps[index].notesController),
           const SizedBox(height: 8),
-          _buildStepField('What to look for', steps[index].lookForController),
+          _buildStepField(
+            'What to look for',
+            steps[index].lookForController,
+            // isRequired: true,
+          ),
         ],
       ),
     );

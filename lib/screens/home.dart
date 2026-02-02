@@ -31,10 +31,15 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final RecipeRepository _repository = RecipeRepository();
+  final TextEditingController _searchController =
+      TextEditingController(); // Add this
 
   bool isLoading = true;
   late String randomQuote;
   List<Recipe> recipes = [];
+  List<Recipe> filteredRecipes =
+      []; // Add this - for displaying filtered results
+  String? selectedCategoryFilter; // Add this - tracks selected category
 
   // List of categories
   final List<String> categories = [
@@ -88,12 +93,14 @@ class _HomePageState extends State<HomePage> {
     _pickRandomQuote();
     Future.delayed(Duration(milliseconds: 100));
     _loadRecipes();
+    _searchController.addListener(_onSearchChanged);
   }
 
   // This one is used to pick a random quote from the list as user opens the screen
   void _pickRandomQuote() {
     setState(() {
       randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
+      print('Quote picked: ${randomQuote}');
     });
   }
 
@@ -106,7 +113,47 @@ class _HomePageState extends State<HomePage> {
 
     setState(() {
       recipes = fetchedRecipes;
+      filteredRecipes = fetchedRecipes; // Initialize filtered list
       isLoading = false;
+    });
+  }
+
+  void _filterByCategory(String? category) {
+    setState(() {
+      selectedCategoryFilter = category;
+    });
+    _filterRecipes(); // Move outside setState
+
+    // Only close drawer if it's actually open
+    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+      Navigator.pop(context);
+    }
+  }
+
+  void _onSearchChanged() {
+    _filterRecipes();
+  }
+
+  void _filterRecipes() {
+    setState(() {
+      filteredRecipes = recipes.where((recipe) {
+        // Filter by search text
+        final matchesSearch =
+            _searchController.text.isEmpty ||
+            recipe.name.toLowerCase().contains(
+              _searchController.text.toLowerCase(),
+            ) ||
+            recipe.ingredients.toLowerCase().contains(
+              _searchController.text.toLowerCase(),
+            );
+
+        // Filter by category
+        final matchesCategory =
+            selectedCategoryFilter == null ||
+            recipe.category == selectedCategoryFilter;
+
+        return matchesSearch && matchesCategory;
+      }).toList();
     });
   }
 
@@ -150,20 +197,34 @@ class _HomePageState extends State<HomePage> {
                           children: [
                             InkWell(
                               onTap: () {
-                                // Handle category selection
-                                Navigator.pop(context);
-                                // TODO: Filter recipes by category
+                                _filterByCategory(
+                                  categories[index],
+                                ); // Changed - now filters by category
                               },
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 12.0,
                                 ),
-                                child: Text(
-                                  categories[index],
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                child: Row(
+                                  // Changed from Text to Row to add checkmark
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      categories[index],
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    // Show checkmark if this category is selected
+                                    if (selectedCategoryFilter ==
+                                        categories[index])
+                                      const Icon(
+                                        Icons.check,
+                                        color: Colors.black,
+                                      ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -242,8 +303,10 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                     ),
                                   ),
-                                  child: const TextField(
-                                    decoration: InputDecoration(
+                                  child: TextField(
+                                    controller:
+                                        _searchController, // Connect controller
+                                    decoration: const InputDecoration(
                                       hintText: 'Find something?',
                                       border: InputBorder.none,
                                       hintStyle: TextStyle(color: Colors.grey),
@@ -252,22 +315,36 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              ElevatedButton(
-                                onPressed: () {},
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: Colors.black,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
+                              // Clear search button
+                              if (_searchController.text.isNotEmpty)
+                                IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                  },
                                 ),
-                                child: const Text('Search'),
-                              ),
                             ],
                           ),
+                          // Show active filter indicator
+                          if (selectedCategoryFilter != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: Row(
+                                children: [
+                                  Chip(
+                                    label: Text(
+                                      'Category: $selectedCategoryFilter',
+                                    ),
+                                    onDeleted: () => _filterByCategory(null),
+                                    deleteIcon: const Icon(
+                                      Icons.close,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           const SizedBox(height: 32),
-                          // Recipe Cards
                           // Recipe Cards
                           isLoading
                               ? const Center(child: CircularProgressIndicator())
@@ -277,7 +354,10 @@ class _HomePageState extends State<HomePage> {
                                     children: [
                                       const SizedBox(height: 40),
                                       Text(
-                                        'No recipes yet!',
+                                        _searchController.text.isEmpty &&
+                                                selectedCategoryFilter == null
+                                            ? 'No recipes yet!'
+                                            : 'No recipes found',
                                         style: TextStyle(
                                           fontSize: 20,
                                           color: Colors.grey[600],
@@ -285,7 +365,10 @@ class _HomePageState extends State<HomePage> {
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        'Tap "Add recipe!" to create your first recipe',
+                                        _searchController.text.isEmpty &&
+                                                selectedCategoryFilter == null
+                                            ? 'Tap "Add recipe!" to create your first recipe'
+                                            : 'Try a different search or category',
                                         style: TextStyle(
                                           fontSize: 14,
                                           color: Colors.grey[500],
@@ -295,7 +378,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 )
                               : Column(
-                                  children: recipes.map((recipe) {
+                                  children: filteredRecipes.map((recipe) {
                                     return Center(
                                       child: Container(
                                         width:
@@ -329,7 +412,7 @@ class _HomePageState extends State<HomePage> {
                                                   onTap: () async {
                                                     print(
                                                       'Tapping recipe: ${recipe.name}, ID: ${recipe.id}',
-                                                    );
+                                                    ); //DEBUG LOG
                                                     await Navigator.pushNamed(
                                                       context,
                                                       '/recipeDetail',
@@ -413,21 +496,19 @@ class _HomePageState extends State<HomePage> {
                                                         String
                                                       >(
                                                         value: 'delete',
-                                                        enabled:
-                                                            false, // Temporarily disabled
+                                                        enabled: true,
                                                         child: Row(
                                                           children: [
                                                             Icon(
                                                               Icons.delete,
-                                                              color:
-                                                                  Colors.grey,
+                                                              color: Colors.red,
                                                             ),
                                                             SizedBox(width: 12),
                                                             Text(
                                                               'Delete',
                                                               style: TextStyle(
                                                                 color:
-                                                                    Colors.grey,
+                                                                    Colors.red,
                                                               ),
                                                             ),
                                                           ],

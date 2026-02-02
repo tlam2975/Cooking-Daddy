@@ -8,7 +8,6 @@ import 'data/models/recipe.dart';
 import 'screens/cooking_session.dart';
 import 'services/notification.dart';
 import 'screens/recipe_detail.dart';
-import 'package:isar/isar.dart';
 
 void main() async {
   // late Isar isar;
@@ -46,7 +45,9 @@ class CookingDaddyApp extends StatelessWidget {
           final recipe = ModalRoute.of(context)?.settings.arguments as Recipe?;
           return RecipeEditorScreen(recipe: recipe);
         },
-        '/recipeDetail': (context) => const RecipeDetailScreen(recipeId: 0),
+        '/recipeDetail': (context) => RecipeDetailScreen(
+          recipeId: ModalRoute.of(context)!.settings.arguments as int,
+        ),
         '/cookingSession': (context) => CookingSessionScreen(
           recipe: ModalRoute.of(context)!.settings.arguments as Recipe,
         ),

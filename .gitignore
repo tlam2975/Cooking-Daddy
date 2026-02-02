@@ -12,6 +12,7 @@
 .swiftpm/
 migrate_working_dir/
 .DS_Store/
+notes.md
 
 # IntelliJ related
 *.iml
@@ -45,4 +46,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+#Environment files
 .env
