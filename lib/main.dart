@@ -8,14 +8,13 @@ import 'data/models/recipe.dart';
 import 'screens/cooking_session.dart';
 import 'services/notification.dart';
 import 'screens/recipe_detail.dart';
+import 'screens/settings.dart';
+import 'screens/profile.dart';
 
 void main() async {
   // late Isar isar;
   print('MAIN: Starting app...');
   WidgetsFlutterBinding.ensureInitialized();
-
-  // final dir = await getApplicationDocumentsDirectory();
-  // isar = await Isar.open([CategorySchema, RecipeSchema], directory: dir.path);
 
   print('MAIN: Initializing Isar...');
   await IsarDatasource.initialize();
@@ -51,6 +50,8 @@ class CookingDaddyApp extends StatelessWidget {
         '/cookingSession': (context) => CookingSessionScreen(
           recipe: ModalRoute.of(context)!.settings.arguments as Recipe,
         ),
+        '/settings': (context) => const SettingsScreen(),
+        '/profile': (context) => const ProfileScreen(),
       },
     );
   }

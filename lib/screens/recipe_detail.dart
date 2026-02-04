@@ -1,0 +1,460 @@
+import 'package:cooking_daddy/data/models/quotes.dart';
+import 'package:flutter/material.dart';
+import 'dart:math';
+import '../data/models/recipe.dart';
+import '../data/repositories/recipe_repository.dart';
+// import '../data/models/quotes.dart';
+
+class RecipeDetailScreen extends StatefulWidget {
+  final int recipeId; // Pass ID instead of whole recipe
+
+  const RecipeDetailScreen({super.key, required this.recipeId});
+
+  @override
+  State<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
+}
+
+class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
+  final RecipeRepository _repository = RecipeRepository();
+
+  late String randomQuote;
+  Recipe? recipe; // Nullable until loaded
+  bool isLoading = true;
+  //Controls Step showing status
+  bool showSteps = false;
+
+  // final List<String> quotes = [
+  //   'just like how ur mom makes it',
+  //   'oui chef!',
+  //   'cause dads can cook too',
+  //   'fuiyoooooooo',
+  //   "please don't mess it up",
+  //   'about to be an influencer',
+  // ];
+
+  @override
+  void initState() {
+    super.initState();
+    randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
+    _loadRecipe();
+  }
+
+  Future<void> _loadRecipe() async {
+    print('=== DEBUG DETAIL ==='); //DEBUG LOG
+    print('Widget recipeId: ${widget.recipeId}'); //DEBUG LOG
+
+    setState(() {
+      isLoading = true;
+    });
+
+    final fetchedRecipe = await _repository.getRecipe(widget.recipeId);
+
+    print('Fetched recipe: ${fetchedRecipe?.name ?? "NULL"}'); //DEBUG LOG
+    print('Fetched ID: ${fetchedRecipe?.id ?? "NULL"}'); //DEBUG LOG
+    print('===================='); //DEBUG LOG
+
+    setState(() {
+      recipe = fetchedRecipe;
+      isLoading = false;
+    });
+  }
+
+  Widget _buildDetailChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFA4A4).withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFFA4A4), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.black87),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFEAEA),
+      body: SafeArea(
+        bottom: false,
+        left: false,
+        right: false,
+        child: Column(
+          children: [
+            // Header
+            Container(
+              width: double.infinity,
+              color: const Color(0xFFFFA4A4),
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Stack(
+                children: [
+                  // Back button
+                  Positioned(
+                    left: 16,
+                    top: 0,
+                    bottom: 0,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        size: 32,
+                        color: Colors.black,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  // Title
+                  Center(
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Cooking Daddy',
+                          style: TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.w500,
+                            color: Color.fromARGB(255, 255, 230, 0),
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          randomQuote,
+                          style: TextStyle(fontSize: 20, color: Colors.black),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : recipe == null
+                  ? const Center(child: Text('Recipe not found'))
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Recipe Name
+                          Center(
+                            child: Text(
+                              recipe!.name,
+                              style: const TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+
+                          // Ingredients Section
+                          const Text(
+                            'Ingredients',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              recipe!.ingredients,
+                              style: const TextStyle(fontSize: 16, height: 1.5),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Tools Section (if available)
+                          if (recipe!.tools.isNotEmpty) ...[
+                            const Text(
+                              'Tools',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                recipe!.tools,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+
+                          // Number of Steps
+                          // Number of Steps (Tappable)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                showSteps = !showSteps; // Toggle visibility
+                              });
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFA4A4),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${recipe!.steps.length} steps',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Icon(
+                                    showSteps
+                                        ? Icons.expand_less
+                                        : Icons.expand_more,
+                                    size: 28,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          // Show Steps if expanded
+                          if (showSteps) ...[
+                            const SizedBox(height: 16),
+                            ...recipe!.steps.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final step = entry.value;
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.grey[300]!,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Step number
+                                    Text(
+                                      'Step ${index + 1}',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFFFA4A4),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+
+                                    // Instruction
+                                    if (step.instruction.isNotEmpty) ...[
+                                      Text(
+                                        step.instruction,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                    ],
+
+                                    // Details row (heat, timer, seasonings)
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 8,
+                                      children: [
+                                        if (step.heat != null &&
+                                            step.heat!.isNotEmpty)
+                                          _buildDetailChip(
+                                            Icons.local_fire_department,
+                                            step.heat!,
+                                          ),
+
+                                        if (step.timer != null &&
+                                            step.timer! > 0)
+                                          _buildDetailChip(
+                                            Icons.timer,
+                                            '${step.timer! ~/ 60}:${(step.timer! % 60).toString().padLeft(2, '0')}',
+                                          ),
+
+                                        if (step.seasonings != null &&
+                                            step.seasonings!.isNotEmpty)
+                                          _buildDetailChip(
+                                            Icons.restaurant,
+                                            step.seasonings!,
+                                          ),
+                                      ],
+                                    ),
+
+                                    // What to look for
+                                    if (step.whatToLookFor.isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFFF9E6),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(0xFFFFE082),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Icon(
+                                              Icons.visibility,
+                                              size: 20,
+                                              color: Color(0xFFFFA726),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Look for: ${step.whatToLookFor}',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  height: 1.4,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+
+                                    // Notes
+                                    if (step.notes != null &&
+                                        step.notes!.isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE3F2FD),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Icon(
+                                              Icons.note,
+                                              size: 20,
+                                              color: Color(0xFF42A5F5),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                step.notes!,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  height: 1.4,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+
+                          const SizedBox(height: 100), // Space for button
+                          const SizedBox(height: 100), // Space for button
+                        ],
+                      ),
+                    ),
+            ),
+            // Start Button (Sticky Bottom)
+            if (!isLoading && recipe != null)
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEAEA),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 12,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(24.0),
+                child: SafeArea(
+                  top: false,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/cookingSession',
+                          arguments: recipe,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFB8E6F5),
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: const Text(
+                        'Start!',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

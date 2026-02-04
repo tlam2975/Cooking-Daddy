@@ -100,7 +100,7 @@ class _HomePageState extends State<HomePage> {
   void _pickRandomQuote() {
     setState(() {
       randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
-      print('Quote picked: ${randomQuote}');
+      print('Quote picked: $randomQuote');
     });
   }
 
@@ -137,15 +137,13 @@ class _HomePageState extends State<HomePage> {
   void _filterRecipes() {
     setState(() {
       filteredRecipes = recipes.where((recipe) {
-        // Filter by search text
+        final searchQuery = _searchController.text.toLowerCase();
+        // Filter by search text - includes name AND ingredients
         final matchesSearch =
-            _searchController.text.isEmpty ||
-            recipe.name.toLowerCase().contains(
-              _searchController.text.toLowerCase(),
-            ) ||
-            recipe.ingredients.toLowerCase().contains(
-              _searchController.text.toLowerCase(),
-            );
+            searchQuery.isEmpty ||
+            recipe.name.toLowerCase().contains(searchQuery) ||
+            (recipe.ingredients.toLowerCase().contains(searchQuery)) ||
+            (recipe.tools.toLowerCase().contains(searchQuery));
 
         // Filter by category
         final matchesCategory =
@@ -181,6 +179,27 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
+                  ListTile(
+                    leading: const Icon(Icons.person, size: 28),
+                    title: const Text(
+                      'Profile',
+                      style: TextStyle(fontSize: 20),
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/profile');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.settings, size: 28),
+                    title: const Text(
+                      'Settings',
+                      style: TextStyle(fontSize: 20),
+                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/settings');
+                    },
+                  ),
+                  const Divider(height: 32, thickness: 2),
                   const SizedBox(height: 24),
                   const Text(
                     'Categories',
