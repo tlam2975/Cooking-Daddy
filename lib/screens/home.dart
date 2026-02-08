@@ -1,6 +1,7 @@
 import 'package:cooking_daddy/data/models/quotes.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'dart:ui';
 import '../data/repositories/recipe_repository.dart';
 import '../data/models/recipe.dart';
 
@@ -31,15 +32,13 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final RecipeRepository _repository = RecipeRepository();
-  final TextEditingController _searchController =
-      TextEditingController(); // Add this
+  final TextEditingController _searchController = TextEditingController();
 
   bool isLoading = true;
   late String randomQuote;
   List<Recipe> recipes = [];
-  List<Recipe> filteredRecipes =
-      []; // Add this - for displaying filtered results
-  String? selectedCategoryFilter; // Add this - tracks selected category
+  List<Recipe> filteredRecipes = [];
+  String? selectedCategoryFilter;
 
   // List of categories
   final List<String> categories = [
@@ -50,15 +49,6 @@ class _HomePageState extends State<HomePage> {
     'Dessert',
     'Drinks',
   ];
-
-  // final List<String> quotes = [
-  //   'just like how ur mom makes it',
-  //   'oui chef!',
-  //   'cause dads can cook too',
-  //   'fuiyoooooooo',
-  //   'please don\'t mess it up',
-  //   'about to be an influencer',
-  // ];
 
   void _showDeleteConfirmation(Recipe recipe) {
     showDialog(
@@ -74,10 +64,9 @@ class _HomePageState extends State<HomePage> {
             ),
             TextButton(
               onPressed: () async {
-                // Delete the recipe
                 await _repository.deleteRecipe(recipe.id);
-                Navigator.pop(context); // Close dialog
-                _loadRecipes(); // Reload the list
+                Navigator.pop(context);
+                _loadRecipes();
               },
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
             ),
@@ -96,7 +85,6 @@ class _HomePageState extends State<HomePage> {
     _searchController.addListener(_onSearchChanged);
   }
 
-  // This one is used to pick a random quote from the list as user opens the screen
   void _pickRandomQuote() {
     setState(() {
       randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
@@ -113,7 +101,7 @@ class _HomePageState extends State<HomePage> {
 
     setState(() {
       recipes = fetchedRecipes;
-      filteredRecipes = fetchedRecipes; // Initialize filtered list
+      filteredRecipes = fetchedRecipes;
       isLoading = false;
     });
   }
@@ -122,9 +110,8 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       selectedCategoryFilter = category;
     });
-    _filterRecipes(); // Move outside setState
+    _filterRecipes();
 
-    // Only close drawer if it's actually open
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.pop(context);
     }
@@ -138,14 +125,12 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       filteredRecipes = recipes.where((recipe) {
         final searchQuery = _searchController.text.toLowerCase();
-        // Filter by search text - includes name AND ingredients
         final matchesSearch =
             searchQuery.isEmpty ||
             recipe.name.toLowerCase().contains(searchQuery) ||
             (recipe.ingredients.toLowerCase().contains(searchQuery)) ||
             (recipe.tools.toLowerCase().contains(searchQuery));
 
-        // Filter by category
         final matchesCategory =
             selectedCategoryFilter == null ||
             recipe.category == selectedCategoryFilter;
@@ -206,7 +191,6 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 32),
-                  // Categories List
                   Expanded(
                     child: ListView.builder(
                       itemCount: categories.length,
@@ -216,16 +200,13 @@ class _HomePageState extends State<HomePage> {
                           children: [
                             InkWell(
                               onTap: () {
-                                _filterByCategory(
-                                  categories[index],
-                                ); // Changed - now filters by category
+                                _filterByCategory(categories[index]);
                               },
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 12.0,
                                 ),
                                 child: Row(
-                                  // Changed from Text to Row to add checkmark
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
@@ -236,7 +217,6 @@ class _HomePageState extends State<HomePage> {
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    // Show checkmark if this category is selected
                                     if (selectedCategoryFilter ==
                                         categories[index])
                                       const Icon(
@@ -247,7 +227,6 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
                             ),
-                            // Lines under each category
                             ...List.generate(
                               3,
                               (lineIndex) => Container(
@@ -308,7 +287,9 @@ class _HomePageState extends State<HomePage> {
                       padding: const EdgeInsets.all(24.0),
                       child: Column(
                         children: [
-                          const SizedBox(height: 60),
+                          const SizedBox(
+                            height: 80,
+                          ), // Increased to accommodate the frosted bar
                           // Search Bar
                           Row(
                             children: [
@@ -323,8 +304,7 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   ),
                                   child: TextField(
-                                    controller:
-                                        _searchController, // Connect controller
+                                    controller: _searchController,
                                     decoration: const InputDecoration(
                                       hintText: 'Find something?',
                                       border: InputBorder.none,
@@ -334,7 +314,6 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              // Clear search button
                               if (_searchController.text.isNotEmpty)
                                 IconButton(
                                   icon: const Icon(Icons.clear),
@@ -431,7 +410,7 @@ class _HomePageState extends State<HomePage> {
                                                   onTap: () async {
                                                     print(
                                                       'Tapping recipe: ${recipe.name}, ID: ${recipe.id}',
-                                                    ); //DEBUG LOG
+                                                    );
                                                     await Navigator.pushNamed(
                                                       context,
                                                       '/recipeDetail',
@@ -444,7 +423,6 @@ class _HomePageState extends State<HomePage> {
                                                         CrossAxisAlignment
                                                             .start,
                                                     children: [
-                                                      // Recipe Name (Row 1)
                                                       Text(
                                                         recipe.name,
                                                         style: const TextStyle(
@@ -455,7 +433,6 @@ class _HomePageState extends State<HomePage> {
                                                         ),
                                                       ),
                                                       const SizedBox(height: 8),
-                                                      // Category and steps (Row 2)
                                                       Text(
                                                         '${recipe.category}, ${recipe.steps.length} steps',
                                                         style: TextStyle(
@@ -477,17 +454,14 @@ class _HomePageState extends State<HomePage> {
                                                 ),
                                                 onSelected: (value) async {
                                                   if (value == 'edit') {
-                                                    // Navigate to recipe editor with recipe data
                                                     await Navigator.pushNamed(
                                                       context,
                                                       '/recipeEditor',
                                                       arguments: recipe,
                                                     );
-                                                    // Reload recipes after editing
                                                     _loadRecipes();
                                                   } else if (value ==
                                                       'delete') {
-                                                    // Show delete confirmation
                                                     _showDeleteConfirmation(
                                                       recipe,
                                                     );
@@ -556,42 +530,82 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-                  // Menu Button
+                  // Gradient blur effect - gets blurrier toward the top
                   Positioned(
-                    top: 24,
-                    left: 24,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.menu,
-                        size: 40,
-                        color: Colors.black,
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: IgnorePointer(
+                      ignoring: true,
+                      child: ClipRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                          child: Container(
+                            height: 100,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  const Color(0xFFFFEAEA).withOpacity(0.9),
+                                  const Color(0xFFFFEAEA).withOpacity(0.7),
+                                  const Color(0xFFFFEAEA).withOpacity(0.3),
+                                  const Color(0xFFFFEAEA).withOpacity(0.0),
+                                ],
+                                stops: const [0.0, 0.4, 0.7, 1.0],
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                     ),
                   ),
-                  // Add Recipe Button
+                  // Menu and Add Recipe buttons (on top of blur)
                   Positioned(
-                    top: 24,
+                    top: 16,
+                    left: 24,
                     right: 24,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await Navigator.pushNamed(context, '/recipeEditor');
-                        _pickRandomQuote();
-                        _loadRecipes();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Menu Button
+                        IconButton(
+                          icon: const Icon(
+                            Icons.menu,
+                            size: 40,
+                            color: Colors.black,
+                          ),
+                          onPressed: () =>
+                              _scaffoldKey.currentState?.openDrawer(),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
+                        // Add Recipe Button
+                        ElevatedButton(
+                          onPressed: () async {
+                            await Navigator.pushNamed(context, '/recipeEditor');
+                            _pickRandomQuote();
+                            _loadRecipes();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
+                          child: const Text(
+                            'Add recipe!',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
-                      ),
-                      child: const Text('Add recipe!'),
+                      ],
                     ),
                   ),
                 ],
