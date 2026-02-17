@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-// import 'package:path_provider/path_provider.dart';
-import 'screens/home.dart';
-import 'screens/recipe_editor.dart';
 import 'data/datasources/isar_datasource.dart';
 import 'data/models/recipe.dart';
 // import 'data/models/category.dart';
+import 'screens/home.dart';
+import 'screens/recipe_editor.dart';
 import 'screens/cooking_session.dart';
-import 'services/notification.dart';
 import 'screens/recipe_detail.dart';
 import 'screens/settings.dart';
 import 'screens/profile.dart';
+import 'screens/ai_features.dart';
+import 'services/notification.dart';
 
 void main() async {
   // late Isar isar;
@@ -34,12 +34,10 @@ class CookingDaddyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(fontFamily: 'PixelifySans'),
-      // Set initial route
-      initialRoute: '/',
-      // Define all routes
+      theme: ThemeData(fontFamily: 'Caveat'),
+      initialRoute: '/home',
       routes: {
-        '/': (context) => const HomePage(),
+        '/home': (context) => const HomePage(),
         '/recipeEditor': (context) {
           final recipe = ModalRoute.of(context)?.settings.arguments as Recipe?;
           return RecipeEditorScreen(recipe: recipe);
@@ -52,6 +50,7 @@ class CookingDaddyApp extends StatelessWidget {
         ),
         '/settings': (context) => const SettingsScreen(),
         '/profile': (context) => const ProfileScreen(),
+        '/aiFeatures': (context) => AIFeaturesScreen(),
       },
     );
   }

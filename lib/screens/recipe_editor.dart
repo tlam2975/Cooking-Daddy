@@ -1,11 +1,11 @@
 import 'dart:math';
-
 import 'package:cooking_daddy/data/models/quotes.dart';
-
 import '../data/models/recipe.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import '../data/repositories/recipe_repository.dart';
+import '../services/ai_interface.dart';
+import '../services/gemini_service.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
   final Recipe? recipe; // Optional recipe for editing
@@ -21,6 +21,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _ingredientsController = TextEditingController();
   final TextEditingController _toolsController = TextEditingController();
+  final AIInterface _aiService = GeminiService();
+  bool _isGenerating = false;
   // List of categories
   final List<String> categories = [
     'Homecook',
@@ -62,6 +64,77 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     }
   }
 
+  Future<void> _generateFromURL() async {
+    if (_urlController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a URL first')));
+      return;
+    }
+
+    setState(() => _isGenerating = true);
+
+    final result = await _aiService.generateFromUrl(_urlController.text.trim());
+
+    setState(() => _isGenerating = false);
+
+    if (result.success && result.recipe != null) {
+      _fillFormWithRecipe(result.recipe!);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '✅ Recipe generated! ${result.remainingQuota ?? 0} uses left',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ ${result.error}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _fillFormWithRecipe(Recipe recipe) {
+    setState(() {
+      _nameController.text = recipe.name;
+      _ingredientsController.text = recipe.ingredients;
+      _toolsController.text = recipe.tools;
+      selectedCategory = recipe.category;
+
+      // Clear and fill steps
+      steps.clear();
+      for (var step in recipe.steps) {
+        final stepData = StepData();
+        stepData.instructionController.text = step.instruction;
+        stepData.heatController.text = step.heat ?? '';
+        stepData.seasoningsController.text = step.seasonings ?? '';
+
+        // Convert timer (seconds) to minutes and seconds
+        if (step.timer != null) {
+          stepData.timerMinController.text = (step.timer! ~/ 60).toString();
+          stepData.timerSecController.text = (step.timer! % 60).toString();
+        }
+
+        stepData.notesController.text = step.notes ?? '';
+        stepData.lookForController.text = step.whatToLookFor;
+        steps.add(stepData);
+      }
+
+      if (steps.isEmpty) {
+        steps = [StepData()];
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +142,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
 
     // Pre-fill data if editing
     if (widget.recipe != null) {
+      _fillFormWithRecipe(widget.recipe!);
       _nameController.text = widget.recipe!.name;
       _urlController.text = widget.recipe!.url ?? '';
       _ingredientsController.text = widget.recipe!.ingredients;
@@ -197,11 +271,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     const SizedBox(height: 16),
 
                     // Generate with AI button
+                    // Generate with AI button
                     Center(
                       child: ElevatedButton(
-                        onPressed: () {
-                          // AI generation logic here
-                        },
+                        onPressed: _isGenerating ? null : _generateFromURL,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,
@@ -213,7 +286,23 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
-                        child: const Text('Generate with AI'),
+                        child: _isGenerating
+                            ? const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text('Analyzing...'),
+                                ],
+                              )
+                            : const Text('Generate with AI'),
                       ),
                     ),
                     const SizedBox(height: 24),

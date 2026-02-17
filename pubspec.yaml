@@ -21,6 +21,9 @@ dependencies:
   # vibration: ^1.8.4
   audioplayers: ^5.2.1
   # flutter_haptic_feedback: ^1.0.1
+  google_generative_ai: ^0.4.0
+  flutter_dotenv: ^6.0.0
+  http: ^1.6.0
 
 # ===============================DEPENDENCIES===============================
 
@@ -38,9 +41,10 @@ flutter:
   
   assets:
     - assets/icons/officialLogo.png
+    # - .env
   
   fonts:
-    - family: PixelifySans
+    - family: Caveat
       fonts:
         - asset: fonts/static/Caveat-Regular.ttf
         - asset: fonts/static/Caveat-Medium.ttf

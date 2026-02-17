@@ -12,6 +12,7 @@
 .swiftpm/
 migrate_working_dir/
 notes.md
+test_gemini.dart
 
 # IntelliJ related
 *.iml
@@ -46,4 +47,4 @@ app.*.map.json
 /android/app/release
 
 #Environment files
-.env
+/server/.env
