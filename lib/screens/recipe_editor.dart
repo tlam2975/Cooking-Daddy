@@ -271,10 +271,20 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     const SizedBox(height: 16),
 
                     // Generate with AI button
-                    // Generate with AI button
                     Center(
                       child: ElevatedButton(
-                        onPressed: _isGenerating ? null : _generateFromURL,
+                        onPressed: _isGenerating
+                            ? null
+                            : () {
+                                // Check if URL field has content
+                                if (_urlController.text.trim().isNotEmpty) {
+                                  // Has URL → Generate from URL
+                                  _generateFromURL();
+                                } else {
+                                  // No URL → Open AI Features
+                                  Navigator.pushNamed(context, '/aiFeatures');
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,
