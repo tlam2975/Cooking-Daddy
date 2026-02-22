@@ -6,7 +6,7 @@ abstract class AIInterface {
     required String ingredients,
     String? tools,
     String? dish,
-    String sessionLength = 'short',
+    String sessionLength = 'normal',
     String difficulty = 'normal',
   });
 

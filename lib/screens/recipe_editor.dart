@@ -302,7 +302,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                   Text('Analyzing...'),
                                 ],
                               )
-                            : const Text('Generate with AI'),
+                            : const Text(
+                                'Generate with AI',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -400,7 +403,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                     style: const TextStyle(
                                       color: Colors.black,
                                       fontSize: 16,
-                                      fontFamily: 'PixelifySans',
+                                      fontFamily: 'Caveat',
                                     ),
                                     items: categories.map((String value) {
                                       return DropdownMenuItem<String>(
@@ -598,10 +601,30 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    bool isRequired = false,
+  }) {
     return Row(
       children: [
-        Text('$label:', style: const TextStyle(fontSize: 18)),
+        // Use RichText to color parts differently
+        isRequired
+            ? RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '$label:',
+                      style: const TextStyle(fontSize: 18, color: Colors.black),
+                    ),
+                    const TextSpan(
+                      text: ' *',
+                      style: TextStyle(fontSize: 18, color: Colors.red),
+                    ),
+                  ],
+                ),
+              )
+            : Text('$label:', style: const TextStyle(fontSize: 18)),
         const SizedBox(width: 16),
         Expanded(
           child: Container(

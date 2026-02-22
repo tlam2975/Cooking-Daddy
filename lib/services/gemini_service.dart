@@ -5,14 +5,14 @@ import 'ai_interface.dart';
 
 class GeminiService implements AIInterface {
   //make sure its the damn right IP address alright?
-  final String baseUrl = 'http://192.168.100.80:2975';
+  final String baseUrl = 'http://192.168.100.173:2975';
 
   @override
   Future<AIGenerationResult> generateFromIngredients({
     required String ingredients,
     String? tools,
     String? dish,
-    String sessionLength = 'short',
+    String sessionLength = 'normal',
     String difficulty = 'normal',
   }) async {
     try {

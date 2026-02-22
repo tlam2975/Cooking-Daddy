@@ -11,7 +11,8 @@ load_dotenv()
 # Configure Gemini
 API_KEY = os.getenv('API_KEY')
 genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-2.0-flash')
+model = genai.GenerativeModel('gemini-2.5-flash')
+#pls make sure its gemini-2.5-flash, cause other models just don't work alright?
 
 # Flask app
 app = Flask(__name__)
@@ -22,25 +23,28 @@ MAX_DAILY_REQUESTS = 50
 request_count = 0
 
 
-# Helper Functions
-def build_prompt(ingredients, tools=None, session_length='short', difficulty='normal', dish=None):
+# Build recipe from ingredients
+def build_prompt(ingredients, tools=None, session_length='normal', difficulty='normal', dish=None):
     """Build prompt for recipe generation"""
     tools_str = f", tools: {tools}" if tools else ""
-    dish_str = dish if dish else "a meal"
+    dish_str = dish if dish else 'a meal'
     
-    prompt = f"""Generate a recipe for {dish_str} using ingredients: {ingredients}{tools_str}, session length: {session_length}, difficulty: {difficulty}.
+    prompt = f"""Generate a recipe for {dish_str} using these ingredients: {ingredients}{tools_str}, session length: {session_length}, difficulty: {difficulty}.
 
 Please return in this very specific fields: name, ingredients, tools, steps[step(instruction(str), heat(str), time(int), seasoning(str), notes(str), whatToLookFor(str))].
 
 The fields name, steps(instruction, whatToLookFor) are required, the rest are optional.
 Timer is saved in seconds as int (3 minutes 20 seconds will be saved as 200).
 
-Please return the exact format as specified, and nothing else. Do not include any additional text or explanations.
+Please return the exact format as specified, and nothing else. Do not include any additional text or explanations. Make sure that all measurements are in metric units (grams, liters, centimeter etc.) and that the recipe is clear and easy to follow. Avoid using any non-standard formatting or markdown.
 The response should be in JSON format."""
+    
+    print(f'Prompt: {prompt}')
     
     return prompt
 
 
+#Extract recipe from URL
 def build_url_prompt(url):
     """Build prompt for URL extraction"""
     prompt = f"""Extract a recipe from this URL: {url}
@@ -52,6 +56,8 @@ Timer is saved in seconds as int (3 minutes 20 seconds will be saved as 200).
 
 Please return the exact format as specified, and nothing else. Do not include any additional text or explanations.
 The response should be in JSON format."""
+    
+    print(f'Prompt: {prompt}')
     
     return prompt
 
@@ -68,6 +74,8 @@ def clean_json_response(text):
     
     if text.endswith('```'):
         text = text[:-3]
+
+    print(f'Cleaned JSON: {text}')
     
     return text.strip()
 
@@ -85,6 +93,15 @@ def increment_quota():
     global request_count
     request_count += 1
 
+@app.route('/', methods=['GET'])
+def home():
+    """Home endpoint"""
+    return jsonify({
+        'message': 'Welcome to Cooking Daddy API Server',
+        'version': '1.0.0',
+        'server': 'Change to /health to see the status of the server'
+    })
+    
 
 # Routes
 @app.route('/health', methods=['GET'])
