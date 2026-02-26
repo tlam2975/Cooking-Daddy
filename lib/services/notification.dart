@@ -1,10 +1,13 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
+    tz.initializeTimeZones();
     const initializationSettingsAndroid = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
@@ -14,13 +17,56 @@ class NotificationService {
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-
     const initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
 
     await _notifications.initialize(initializationSettings);
+  }
+
+  static Future<void> scheduleTimerNotification({
+    required int seconds,
+    required String recipeName,
+    required int stepNumber,
+  }) async {
+    final scheduledDate = tz.TZDateTime.now(
+      tz.local,
+    ).add(Duration(seconds: seconds));
+
+    const androidDetails = AndroidNotificationDetails(
+      'cooking_timer',
+      'Cooking Timer',
+      channelDescription: 'Notifications for cooking timer completion',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      interruptionLevel: InterruptionLevel.timeSensitive,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notifications.zonedSchedule(
+      0, // Notification ID
+      'Timer Done! ⏰',
+      'Step $stepNumber for $recipeName is ready',
+      scheduledDate,
+      notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+
+    print('✅ Notification scheduled for $seconds seconds from now');
   }
 
   static Future<void> showTimerDoneNotification(
@@ -85,5 +131,9 @@ class NotificationService {
       body,
       notificationDetails,
     );
+  }
+
+  static Future<void> cancelScheduledNotifications() async {
+    await _notifications.cancel(0);
   }
 }

@@ -12,7 +12,6 @@ import 'screens/ai_features.dart';
 import 'services/notification.dart';
 
 void main() async {
-  // late Isar isar;
   print('MAIN: Starting app...');
   WidgetsFlutterBinding.ensureInitialized();
 

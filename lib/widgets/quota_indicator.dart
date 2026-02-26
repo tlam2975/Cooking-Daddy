@@ -75,10 +75,10 @@ class _QuotaIndicatorState extends State<QuotaIndicator> {
 
     final percentage = _quota!.remaining / _quota!.limit;
     final color = percentage > 0.5
-        ? Colors.green
+        ? const Color.fromARGB(255, 85, 248, 161)
         : percentage > 0.2
-        ? Colors.orange
-        : Colors.red;
+        ? const Color.fromARGB(255, 255, 166, 33)
+        : const Color.fromARGB(255, 255, 70, 57);
 
     return Container(
       padding: const EdgeInsets.all(12),

@@ -4,15 +4,22 @@ from flask_cors import CORS
 import os
 import json
 from dotenv import load_dotenv
+from colorama import Fore, Style
+import requests
 
 # Load environment variables
 load_dotenv()
 
 # Configure Gemini
-API_KEY = os.getenv('API_KEY')
-genai.configure(api_key=API_KEY)
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-2.5-flash')
-#pls make sure its gemini-2.5-flash, cause other models just don't work alright?
+#check https://aistudio.google.com/rate-limit for more models
+# But gemini-2.5-flash is the only one that works ...
+# Configure weather
+WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
+
+
 
 # Flask app
 app = Flask(__name__)
@@ -21,6 +28,7 @@ CORS(app)
 # Configuration
 MAX_DAILY_REQUESTS = 50
 request_count = 0
+order = 0
 
 
 # Build recipe from ingredients
@@ -35,11 +43,15 @@ Please return in this very specific fields: name, ingredients, tools, steps[step
 
 The fields name, steps(instruction, whatToLookFor) are required, the rest are optional.
 Timer is saved in seconds as int (3 minutes 20 seconds will be saved as 200).
-
-Please return the exact format as specified, and nothing else. Do not include any additional text or explanations. Make sure that all measurements are in metric units (grams, liters, centimeter etc.) and that the recipe is clear and easy to follow. Avoid using any non-standard formatting or markdown.
+You don't have to use all the ingredients, but try not to add to many extra ingredients that are not in the list. If you do add extra ingredients, make sure they are common pantry items. Also suggest the ingredients that are common in Asia.
+ALso note that the field "item" should retur all the items, you do not have to seperate it to many item fields
+Please return the exact format as specified, and nothing else. Do not include any additional text or explanations. If notes, heat and timer are blank, then simply leave them out of that step. Make sure that all measurements are in metric units (grams, liters, centimeter etc.) and that the recipe is clear and easy to follow. Avoid using any non-standard formatting or markdown.
 The response should be in JSON format."""
     
-    print(f'Prompt: {prompt}')
+    global order
+    order += 1
+    print(f'{Fore.GREEN}Order: {order}{Style.RESET_ALL}')
+    print(f'{Fore.CYAN}Prompt: {prompt}{Style.RESET_ALL}')
     
     return prompt
 
@@ -54,10 +66,99 @@ Please return in this very specific fields: name, ingredients, tools, steps[step
 The fields name, steps(instruction, whatToLookFor) are required, the rest are optional.
 Timer is saved in seconds as int (3 minutes 20 seconds will be saved as 200).
 
-Please return the exact format as specified, and nothing else. Do not include any additional text or explanations.
+Please return the exact format as specified, and nothing else. Do not include any additional text or explanations. If notes, heat and timer are blank, then simply leave them out of that step
 The response should be in JSON format."""
     
-    print(f'Prompt: {prompt}')
+    global order
+    order += 1
+    print(f'{Fore.GREEN}Order: {order}{Style.RESET_ALL}')
+    print(f'{Fore.CYAN}Prompt: {prompt}{Style.RESET_ALL}')
+    
+    return prompt
+
+def build_smart_prompt(ingredients, tools, dish, session_length, difficulty, 
+                       weather, meal_time, current_hour):
+    """Build context-aware prompt with weather and time"""
+    
+    tools_str = f", tools: {tools}" if tools else ""
+    dish_str = dish if dish else "a meal"
+    
+    prompt = f"""Generate a recipe for {dish_str} using ingredients: {ingredients}{tools_str}
+
+Requirements:
+- Session length: {session_length}
+- Difficulty: {difficulty}
+"""
+    
+    # Add time context
+    prompt += f"\nTime Context:\n- Current time: {meal_time} ({current_hour}:00)\n"
+    
+    # Time-specific suggestions
+    if meal_time == 'breakfast':
+        prompt += "- Suggest energizing breakfast foods\n"
+    elif meal_time == 'lunch':
+        prompt += "- Suggest moderate portions, balanced meal\n"
+    elif current_hour >= 20:  # After 8pm
+        prompt += "- CRITICAL: Late night cooking\n"
+        prompt += "- Suggest QUICK recipes (max 15 minutes)\n"
+        prompt += "- Light portions, easy to digest\n"
+    elif meal_time == 'dinner':
+        prompt += "- Suggest hearty dinner portions\n"
+    
+    # Add weather context if available
+    if weather:
+        temp = weather['temperature']
+        condition = weather['condition']
+        city = weather['city']
+        
+        prompt += f"\nWeather Context:\n- Location: {city}\n"
+        prompt += f"- Temperature: {temp}°C (feels like {weather['feels_like']}°C)\n"
+        prompt += f"- Condition: {condition}\n"
+        
+        # Temperature suggestions
+        if temp > 30:
+            prompt += "- VERY HOT: Suggest cold dishes, salads, no-cook meals\n"
+        elif temp > 25:
+            prompt += "- Warm: Light, refreshing meals\n"
+        elif temp < 15:
+            prompt += "- Cool: Warm, comforting dishes\n"
+        elif temp < 10:
+            prompt += "- COLD: Hot soups, stews, warming meals\n"
+        
+        # Weather condition
+        if weather.get('is_raining'):
+            prompt += "- RAINING: Perfect for hot soups, broths, comfort food\n"
+        
+        # Cultural context
+        prompt += f"- Consider {city}'s local cuisine preferences\n"
+    
+    # Format requirements
+    prompt += """
+Please consider ALL context above when generating.
+
+Return ONLY JSON format:
+{
+  "name": "Recipe name",
+  "category": "Breakfast/Lunch/Dinner/Dessert/Drinks/Lazy meals",
+  "ingredients": "ingredient1, ingredient2",
+  "tools": "tool1, tool2",
+  "steps": [
+    {
+      "instruction": "Step description",
+      "heat": "High/Medium/Low/Off",
+      "time": 200,
+      "seasoning": "salt, pepper",
+      "notes": "Tips",
+      "whatToLookFor": "Visual cues"
+    }
+  ]
+}
+
+- All measurements in metric (grams, liters)
+- Timer in seconds as int
+- Don't add too many extra ingredients
+- Suggest common Asian pantry items
+"""
     
     return prompt
 
@@ -95,18 +196,16 @@ def increment_quota():
 
 @app.route('/', methods=['GET'])
 def home():
-    """Home endpoint"""
     return jsonify({
         'message': 'Welcome to Cooking Daddy API Server',
         'version': '1.0.0',
         'server': 'Change to /health to see the status of the server'
     })
-    
 
-# Routes
+
 @app.route('/health', methods=['GET'])
 def health():
-    """Health check endpoint"""
+    # Health check endpoint
     return jsonify({
         'status': 'healthy',
         'message': 'Cooking Daddy API Server is running'
@@ -213,7 +312,7 @@ def generate_from_url():
         
         # Clean and parse
         cleaned = clean_json_response(ai_text)
-        print(f'🧹 CLEANED JSON:\n{cleaned}\n')
+        print(f'{Fore.GREEN}🧹 CLEANED JSON:\n{cleaned}\n{Style.RESET_ALL}')
         
         recipe = json.loads(cleaned)
         print(f'✅ PARSED RECIPE: {recipe.get("name", "Unknown")}\n')
@@ -239,11 +338,137 @@ def generate_from_url():
             'error': str(e)
         }), 500
 
+@app.route('/api/weather/<location>', methods=['GET'])
+def get_weather(location):
+    """Get weather for a location"""
+    if not location:
+        return jsonify({'error': 'Location is required'}), 400
+    
+    url = f'https://api.openweathermap.org/data/2.5/weather?q={location}&appid={WEATHER_API_KEY}&units=metric'
+    
+    try:
+        response = requests.get(url)
+        data = response.json()
+        
+        if response.status_code != 200:
+            return jsonify({
+                'error': data.get('message', 'Failed to fetch weather')
+            }), response.status_code
+        
+        weather_info = {
+            "weather": [{
+                "main": data['weather'][0]['main'],
+                "description": data['weather'][0]['description'],
+            }],
+            "main": {
+                "temp": data['main']['temp'],
+                "feels_like": data['main']['feels_like'],
+                "temp_min": data['main']['temp_min'],
+                "temp_max": data['main']['temp_max'],
+                "humidity": data['main']['humidity'],
+            },
+            "rain": {
+                "1h": data['rain']['1h'] if 'rain' in data and '1h' in data['rain'] else 0
+            },
+            "name": data['name'],
+        }
+        
+        return jsonify(weather_info)  # ← Added return
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/smart-generate', methods=['POST'])
+def smart_generate():
+    """Context-aware recipe generation with weather"""
+    
+    data = request.get_json()
+    
+    # Required
+    ingredients = data.get('ingredients', '').strip()
+    if not ingredients:
+        return jsonify({'error': 'Ingredients required'}), 400
+    
+    # Optional
+    tools = data.get('tools', '').strip() or None
+    dish = data.get('dish', '').strip() or None
+    session_length = data.get('sessionLength', 'short')
+    difficulty = data.get('difficulty', 'normal')
+    location = data.get('location')  # City name (e.g., "Hanoi")
+    
+    # Get weather if location provided
+    weather = None
+    if location:
+        try:
+            weather_url = f'https://api.openweathermap.org/data/2.5/weather?q={location}&appid={WEATHER_API_KEY}&units=metric'
+            weather_response = requests.get(weather_url)
+            
+            if weather_response.status_code == 200:
+                weather_data = weather_response.json()
+                weather = {
+                    'temperature': weather_data['main']['temp'],
+                    'feels_like': weather_data['main']['feels_like'],
+                    'condition': weather_data['weather'][0]['main'],
+                    'description': weather_data['weather'][0]['description'],
+                    'humidity': weather_data['main']['humidity'],
+                    'city': weather_data['name'],
+                    'is_raining': 'rain' in weather_data and weather_data['rain'].get('1h', 0) > 0
+                }
+        except Exception as e:
+            print(f'Weather fetch failed: {e}')
+    
+    # Get time context
+    now = datetime.now()
+    current_hour = now.hour
+    
+    if 6 <= current_hour < 11:
+        meal_time = 'breakfast'
+    elif 11 <= current_hour < 15:
+        meal_time = 'lunch'
+    else:
+        meal_time = 'dinner'
+    
+    # Build smart prompt
+    prompt = build_smart_prompt(
+        ingredients=ingredients,
+        tools=tools,
+        dish=dish,
+        session_length=session_length,
+        difficulty=difficulty,
+        weather=weather,
+        meal_time=meal_time,
+        current_hour=current_hour,
+    )
+    
+    # Generate with Gemini
+    try:
+        response = model.generate_content(prompt)
+        
+        # Clean and parse
+        cleaned = clean_json_response(response.text)
+        recipe_data = json.loads(cleaned)
+        
+        return jsonify({
+            'success': True,
+            'recipe': recipe_data,
+            'context': {
+                'weather': weather,
+                'meal_time': meal_time,
+                'hour': current_hour
+            }
+        })
+        
+    except Exception as e:
+        print(f'Generation error: {e}')
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 # Run server
 if __name__ == '__main__':
-    if not API_KEY:
-        print('❌ ERROR: API_KEY not found in .env')
+    if not GEMINI_API_KEY:
+        print('❌ ERROR: GEMINI_API_KEY not found in .env')
         exit(1)
     
     PORT = 2975

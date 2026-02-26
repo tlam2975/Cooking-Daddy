@@ -25,6 +25,7 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
   void initState() {
     super.initState();
     randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
+    // print('🔵 Recipe Editor opened with recipe: ${widget.recipe?.name ?? "null"}');
     _checkHealth();
   }
 
@@ -53,17 +54,17 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
     );
 
     if (result != null && result.success && result.recipe != null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ Generated: ${result.recipe!.name}'),
-            backgroundColor: Colors.green,
-          ),
-        );
+      // if (mounted) {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     SnackBar(
+      //       content: Text('✅ Generated: ${result.recipe!.name}'),
+      //       backgroundColor: Colors.green,
+      //     ),
+      //   );
 
-        // Navigate to recipe editor with generated recipe
-        Navigator.pushNamed(context, '/recipeEditor', arguments: result.recipe);
-      }
+      //   // Navigate to recipe editor with generated recipe
+      // }
+      Navigator.pushNamed(context, '/recipeEditor', arguments: result.recipe);
     }
   }
 
@@ -276,29 +277,43 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
   }
 
   Future<void> _showUrlDialog() async {
-    final result = await showDialog<bool>(
+    // final result = await showDialog<bool>(
+    //   context: context,
+    //   builder: (context) => AlertDialog(
+    //     title: const Text('Generate from URL'),
+    //     content: TextField(
+    //       controller: _urlController,
+    //       decoration: const InputDecoration(
+    //         hintText: 'https://youtube.com/...',
+    //         border: OutlineInputBorder(),
+    //       ),
+    //     ),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.pop(context, false),
+    //         child: const Text('Cancel'),
+    //       ),
+    //       TextButton(
+    //         onPressed: () => Navigator.pop(context, true),
+    //         child: const Text('Generate'),
+    //       ),
+    //     ],
+    //   ),
+    // );
+    final result = await showModalBottomSheet<AIGenerationResult>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Generate from URL'),
-        content: TextField(
-          controller: _urlController,
-          decoration: const InputDecoration(
-            hintText: 'https://youtube.com/...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Generate'),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const GenerateFromIngredientsModal(),
     );
+
+    if (result != null && result.success && result.recipe != null) {
+      Navigator.pushNamed(
+        context,
+        '/recipeEditor',
+        arguments: result.recipe, // ← Passes recipe to editor
+      );
+    }
 
     if (result == true && _urlController.text.isNotEmpty) {
       if (mounted) {

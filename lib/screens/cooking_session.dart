@@ -3,10 +3,8 @@ import 'dart:math';
 import 'dart:async';
 import '../data/models/recipe.dart';
 import '../data/models/quotes.dart';
-import '../services/notification.dart';
-// import 'package:vibration/vibration.dart';
-// import 'package:flutter_haptic_feedback/flutter_haptic_feedback.dart';
-import 'package:flutter/services.dart';
+// import 'package:flutter/services.dart';
+import '../services/timer.dart';
 
 class CookingSessionScreen extends StatefulWidget {
   final Recipe recipe;
@@ -20,20 +18,12 @@ class CookingSessionScreen extends StatefulWidget {
 class _CookingSessionScreenState extends State<CookingSessionScreen> {
   late String randomQuote;
   int currentStepIndex = 0;
+  final TimerService _timerService = TimerService();
 
   // Timer variables
   Timer? timer;
   int remainingSeconds = 0;
   bool timerRunning = false;
-
-  // final List<String> quotes = [
-  //   'just like how ur mom makes it',
-  //   'oui chef!',
-  //   'cause dads can cook too',
-  //   'fuiyoooooooo',
-  //   "haiyaaa don't mess it up",
-  //   'about to be an influencer',
-  // ];
 
   @override
   void initState() {
@@ -43,66 +33,18 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
 
   @override
   void dispose() {
-    timer?.cancel();
+    _timerService.dispose();
     super.dispose();
   }
 
   void startTimer(int totalSeconds) {
-    setState(() {
-      remainingSeconds = totalSeconds;
-      timerRunning = true;
-    });
-
-    timer?.cancel();
-    timer = Timer.periodic(const Duration(seconds: 1), (Timer t) {
-      if (!mounted) {
-        t.cancel();
-        return;
-      }
-      setState(() {
-        if (remainingSeconds > 0) {
-          remainingSeconds--;
-          print('Timer: $remainingSeconds seconds remaining');
-        } else {
-          print('Timer: Reached zero! Calling _onTimerComplete');
-          t.cancel();
-          timerRunning = false;
-          _onTimerComplete();
-        }
-      });
-    });
-  }
-
-  Future<void> _onTimerComplete() async {
-    try {
-      // Haptic feedback for iOS
-      for (int i = 0; i < 10; i++) {
-        await HapticFeedback.heavyImpact();
-        await Future.delayed(const Duration(milliseconds: 100));
-        await HapticFeedback.heavyImpact();
-        await Future.delayed(const Duration(milliseconds: 400));
-        await HapticFeedback.heavyImpact();
-      }
-      // Notification
-      await NotificationService.showTimerCompleteNotification(
-        title: 'Timer Done! ⏰',
-        body:
-            'Step ${currentStepIndex + 1} for ${widget.recipe.name} is ready. \nComeback right now!',
-      );
-
-      // Visual feedback
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('⏰ Timer done! Check Step ${currentStepIndex + 1}'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error in _onTimerComplete: $e');
-    }
+    print('Starting timer for $totalSeconds seconds');
+    _timerService.startTimer(
+      seconds: totalSeconds,
+      recipeName: widget.recipe.name,
+      stepNumber: currentStepIndex + 1,
+    );
+    print('Timer service is running: ${_timerService.isRunning}');
   }
 
   //===============V2 of _onTimerComplete - Added sound alarm=============================
@@ -151,10 +93,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
   //==========================================
 
   void stopTimer() {
-    timer?.cancel();
-    setState(() {
-      timerRunning = false;
-    });
+    _timerService.stopTimer();
   }
 
   void nextStep() {
@@ -183,87 +122,92 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLastStep = currentStepIndex >= widget.recipe.steps.length;
-    final currentStep = isLastStep
-        ? null
-        : widget.recipe.steps[currentStepIndex];
+    return ListenableBuilder(
+      listenable: _timerService,
+      builder: (context, child) {
+        final isLastStep = currentStepIndex >= widget.recipe.steps.length;
+        final currentStep = isLastStep
+            ? null
+            : widget.recipe.steps[currentStepIndex];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFEAEA),
-      body: SafeArea(
-        bottom: false,
-        left: false,
-        right: false,
-        child: Column(
-          children: [
-            // Header
-            Container(
-              width: double.infinity,
-              color: const Color(0xFFFFA4A4),
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Stack(
-                children: [
-                  // Back button
-                  Positioned(
-                    left: 16,
-                    top: 0,
-                    bottom: 0,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        size: 32,
-                        color: Colors.black,
-                      ),
-                      onPressed: () {
-                        stopTimer();
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ),
-                  // Title
-                  Center(
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Cooking Daddy',
-                          style: TextStyle(
-                            fontSize: 40,
-                            color: Color.fromARGB(255, 255, 230, 0),
-                          ),
-                        ),
-                        Text(
-                          randomQuote,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
+        return Scaffold(
+          backgroundColor: const Color(0xFFFFEAEA),
+          body: SafeArea(
+            bottom: false,
+            left: false,
+            right: false,
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  color: const Color(0xFFFFA4A4),
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Stack(
+                    children: [
+                      // Back button
+                      Positioned(
+                        left: 16,
+                        top: 0,
+                        bottom: 0,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            size: 32,
                             color: Colors.black,
-                            letterSpacing: 2,
                           ),
+                          onPressed: () {
+                            stopTimer();
+                            Navigator.pop(context);
+                          },
                         ),
-                        const SizedBox(height: 8),
-                      ],
-                    ),
+                      ),
+                      // Title
+                      Center(
+                        child: Column(
+                          children: [
+                            const Text(
+                              'Cooking Daddy',
+                              style: TextStyle(
+                                fontSize: 40,
+                                color: Color.fromARGB(255, 255, 230, 0),
+                              ),
+                            ),
+                            Text(
+                              randomQuote,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                // Content
+                Expanded(
+                  child: isLastStep
+                      ? _buildCompletionScreen()
+                      : _buildStepScreen(currentStep!),
+                ),
+                // Footer
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(
+                    '©2026 Tung Lam created',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                  ),
+                ),
+              ],
             ),
-            // Content
-            Expanded(
-              child: isLastStep
-                  ? _buildCompletionScreen()
-                  : _buildStepScreen(currentStep!),
-            ),
-            // Footer
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                '©2026 Tung Lam created',
-                style: TextStyle(fontSize: 12, color: Colors.grey[400]),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -385,8 +329,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                timerRunning
-                    ? formatTime(remainingSeconds)
+                _timerService.isRunning
+                    ? formatTime(_timerService.remainingSeconds)
                     : formatTime(step.timer!),
                 style: const TextStyle(
                   fontSize: 48,
@@ -395,7 +339,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            if (!timerRunning)
+            if (!_timerService.isRunning)
               ElevatedButton(
                 onPressed: () => startTimer(step.timer!),
                 style: ElevatedButton.styleFrom(
@@ -411,7 +355,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                 ),
                 child: const Text('Start Timer'),
               ),
-            if (timerRunning)
+            if (_timerService.isRunning)
               ElevatedButton(
                 onPressed: stopTimer,
                 style: ElevatedButton.styleFrom(
@@ -537,9 +481,9 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
             const Text(
               'Congratulations!!',
               style: TextStyle(
-                fontSize: 32,
+                fontSize: 48,
                 fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 255, 231, 11),
+                color: Color.fromARGB(255, 0, 0, 0),
               ),
               textAlign: TextAlign.center,
               // ,
@@ -552,7 +496,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
             Text(
               widget.recipe.name,
               style: const TextStyle(
-                fontSize: 36,
+                fontSize: 60,
                 fontWeight: FontWeight.bold,
                 color: Color.fromARGB(255, 255, 58, 58),
               ),

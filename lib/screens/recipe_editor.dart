@@ -8,7 +8,7 @@ import '../services/ai_interface.dart';
 import '../services/gemini_service.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
-  final Recipe? recipe; // Optional recipe for editing
+  final Recipe? recipe;
 
   const RecipeEditorScreen({super.key, this.recipe});
 
@@ -139,6 +139,11 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   void initState() {
     super.initState();
     randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
+    print('🔵 Recipe Editor opened');
+    print('🔵 widget.recipe is null? ${widget.recipe == null}');
+    if (widget.recipe != null) {
+      print('✅ Has recipe: ${widget.recipe!.name}');
+    }
 
     // Pre-fill data if editing
     if (widget.recipe != null) {
