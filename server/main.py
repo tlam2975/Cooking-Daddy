@@ -1,4 +1,5 @@
 import google.generativeai as genai
+import goo
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
@@ -11,13 +12,65 @@ import requests
 load_dotenv()
 
 # Configure Gemini
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash')
+# GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
+API_KEYS = [
+    os.getenv('GEMINI_API_KEY_1'),
+    os.getenv('GEMINI_API_KEY_2'),
+    os.getenv('GEMINI_API_KEY_3'),
+    os.getenv('GEMINI_API_KEY_4'),
+]
+
+# Remove None values
+API_KEYS = [key for key in API_KEYS if key]
+
+if not API_KEYS:
+    raise ValueError("No API keys found in .env file")
+
+# Track which key to use next (round-robin)
+current_key_index = 0
+
+def get_next_api_key():
+    """Get next API key in rotation"""
+    global current_key_index
+    key = API_KEYS[current_key_index]
+    current_key_index = (current_key_index + 1) % len(API_KEYS)
+    return key
+
+def try_all_keys(prompt):
+    """Try generation with all available API keys"""
+    last_error = None
+    
+    for i, api_key in enumerate(API_KEYS):
+        try:
+            print(f'🔑 Trying API key #{i+1}')
+            
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-2.5-flash')  
+            
+            response = model.generate_content(prompt)
+            
+            print(f'✅ Success with key #{i+1}')
+            return response
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f'❌ Key #{i+1} failed: {error_msg}')
+            last_error = error_msg
+            
+            # Check if it's a quota error
+            if '429' in error_msg or 'quota' in error_msg.lower():
+                print(f'⚠️ Key #{i+1} quota exceeded, trying next...')
+                continue
+            else:
+                # Other error, might work with another key
+                continue
+    
+    # All keys failed
+    raise Exception(f'All API keys exhausted. Last error: {last_error}')
 #check https://aistudio.google.com/rate-limit for more models
 # But gemini-2.5-flash is the only one that works ...
 # Configure weather
-WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
 
 
 
@@ -44,7 +97,7 @@ Please return in this very specific fields: name, ingredients, tools, steps[step
 The fields name, steps(instruction, whatToLookFor) are required, the rest are optional.
 Timer is saved in seconds as int (3 minutes 20 seconds will be saved as 200).
 You don't have to use all the ingredients, but try not to add to many extra ingredients that are not in the list. If you do add extra ingredients, make sure they are common pantry items. Also suggest the ingredients that are common in Asia.
-ALso note that the field "item" should retur all the items, you do not have to seperate it to many item fields
+Also note that the field "item" should return all items in a single string separated by comma, not a list. For example: "item1 40g, item2 2kg, item3 100g". Do not return it as a list.
 Please return the exact format as specified, and nothing else. Do not include any additional text or explanations. If notes, heat and timer are blank, then simply leave them out of that step. Make sure that all measurements are in metric units (grams, liters, centimeter etc.) and that the recipe is clear and easy to follow. Avoid using any non-standard formatting or markdown.
 The response should be in JSON format."""
     
@@ -65,6 +118,8 @@ Please return in this very specific fields: name, ingredients, tools, steps[step
 
 The fields name, steps(instruction, whatToLookFor) are required, the rest are optional.
 Timer is saved in seconds as int (3 minutes 20 seconds will be saved as 200).
+Also note that the field "item" should return all items in a single string separated by comma, not a list. For example: "item1 40g, item2 2kg, item3 100g". Do not return it as a list.
+
 
 Please return the exact format as specified, and nothing else. Do not include any additional text or explanations. If notes, heat and timer are blank, then simply leave them out of that step
 The response should be in JSON format."""
@@ -249,7 +304,7 @@ def generate_from_ingredients():
         print(f'\n📤 PROMPT SENT:\n{prompt}\n')
         
         # Call Gemini
-        response = model.generate_content(prompt)
+        response = try_all_keys(prompt)
         ai_text = response.text
         print(f'📥 AI RAW RESPONSE:\n{ai_text}\n')
         
@@ -306,7 +361,7 @@ def generate_from_url():
         print(f'\n📤 PROMPT SENT:\n{prompt}\n')
         
         # Call Gemini
-        response = model.generate_content(prompt)
+        response = try_all_keys(prompt)
         ai_text = response.text
         print(f'📥 AI RAW RESPONSE:\n{ai_text}\n')
         
@@ -442,7 +497,7 @@ def smart_generate():
     
     # Generate with Gemini
     try:
-        response = model.generate_content(prompt)
+        response = try_all_keys(prompt)
         
         # Clean and parse
         cleaned = clean_json_response(response.text)
@@ -467,7 +522,7 @@ def smart_generate():
 
 # Run server
 if __name__ == '__main__':
-    if not GEMINI_API_KEY:
+    if not API_KEYS:
         print('❌ ERROR: GEMINI_API_KEY not found in .env')
         exit(1)
     
