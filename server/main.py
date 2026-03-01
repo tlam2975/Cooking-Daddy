@@ -1,5 +1,5 @@
 import google.generativeai as genai
-import goo
+# import google.genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
@@ -11,9 +11,9 @@ import requests
 # Load environment variables
 load_dotenv()
 
-# Configure Gemini
-# GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+# Configure APIs
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
+
 API_KEYS = [
     os.getenv('GEMINI_API_KEY_1'),
     os.getenv('GEMINI_API_KEY_2'),

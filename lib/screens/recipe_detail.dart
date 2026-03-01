@@ -4,6 +4,7 @@ import 'dart:math';
 import '../data/models/recipe.dart';
 import '../data/repositories/recipe_repository.dart';
 // import '../data/models/quotes.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final int recipeId; // Pass ID instead of whole recipe
@@ -141,7 +142,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : recipe == null
-                  ? const Center(child: Text('Recipe not found'))
+                  ? Center(child: Text('noRecipesFound'.tr()))
                   : SingleChildScrollView(
                       padding: const EdgeInsets.all(24.0),
                       child: Column(
@@ -161,9 +162,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                           const SizedBox(height: 32),
 
                           // Ingredients Section
-                          const Text(
-                            'Ingredients',
-                            style: TextStyle(
+                          Text(
+                            'ingredients'.tr(),
+                            style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
@@ -185,9 +186,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
                           // Tools Section (if available)
                           if (recipe!.tools.isNotEmpty) ...[
-                            const Text(
-                              'Tools',
-                              style: TextStyle(
+                            Text(
+                              'tools'.tr(),
+                              style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -271,7 +272,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                   children: [
                                     // Step number
                                     Text(
-                                      'Step ${index + 1}',
+                                      '${'step'.tr()} ${index + 1}',
                                       style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -347,7 +348,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                             const SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
-                                                'Look for: ${step.whatToLookFor}',
+                                                '${'lookFor'.tr()}: ${step.whatToLookFor}',
                                                 style: const TextStyle(
                                                   fontSize: 14,
                                                   height: 1.4,
@@ -441,9 +442,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                         ),
                         elevation: 2,
                       ),
-                      child: const Text(
-                        'Start!',
-                        style: TextStyle(
+                      child: Text(
+                        'start_cooking'.tr(),
+                        style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),

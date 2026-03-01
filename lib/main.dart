@@ -10,20 +10,29 @@ import 'screens/settings.dart';
 import 'screens/profile.dart';
 import 'screens/ai_features.dart';
 import 'services/notification.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 void main() async {
   print('MAIN: Starting app...');
   WidgetsFlutterBinding.ensureInitialized();
 
-  print('MAIN: Initializing Isar...');
+  // print('MAIN: Initializing Isar...');
   await IsarDatasource.initialize();
   print('MAIN: Isar initialized!');
+  await EasyLocalization.ensureInitialized();
 
   print('MAIN: Initializing notifications...');
   await NotificationService.initialize();
   print('MAIN: Running app...');
 
-  runApp(const CookingDaddyApp());
+  runApp(
+    EasyLocalization(
+      supportedLocales: [Locale('en'), Locale('vi')],
+      path: 'assets/translations',
+      fallbackLocale: Locale('en'),
+      child: CookingDaddyApp(),
+    ),
+  );
 }
 
 class CookingDaddyApp extends StatelessWidget {
@@ -31,9 +40,15 @@ class CookingDaddyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentLocale = context.locale.languageCode;
+    final fontFamily = currentLocale == 'vi' ? 'DarleySans' : 'Caveat';
     return MaterialApp(
+      title: 'Cooking Daddy',
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(fontFamily: 'Caveat'),
+      theme: ThemeData(fontFamily: fontFamily),
       initialRoute: '/home',
       routes: {
         '/home': (context) => const HomePage(),

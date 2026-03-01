@@ -1,7 +1,7 @@
 name: cooking_daddy
 description: "This app aims to support users who are struggling to cook. It provides very specific details down to each step. Also, the app takes the very necessary informations that really matter to newbie chefs."
 publish_to: 'none'
-version: 1.0.0+1
+version: 2.0.0
 
 environment:
   sdk: ^3.10.4
@@ -25,6 +25,7 @@ dependencies:
   flutter_dotenv: ^6.0.0
   http: ^1.6.0
   timezone: ^0.9.4
+  easy_localization: ^3.0.7
 
 # ===============================DEPENDENCIES===============================
 
@@ -42,7 +43,7 @@ flutter:
   
   assets:
     - assets/icons/officialLogo.png
-    # - .env
+    - assets/translations/
   
   fonts:
     - family: Caveat
@@ -54,6 +55,10 @@ flutter:
           weight: 600
         - asset: fonts/static/Caveat-Bold.ttf
           weight: 700
+          
+    - family: DarleySans
+      fonts:
+        - asset: fonts/static/DarleySans-Regular.otf
 
   # ===============================DEV_DEPENDENCIES===============================
 

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'dart:math';
 import 'dart:async';
@@ -199,7 +200,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Text(
-                    '©2026 Tung Lam created',
+                    'copyright'.tr(),
                     style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                   ),
                 ),
@@ -260,8 +261,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Heat',
+                      Text(
+                        'heat'.tr(),
                         style: TextStyle(fontSize: 14, color: Colors.grey),
                       ),
                       Text(
@@ -296,8 +297,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Seasonings',
+                      Text(
+                        'seasonings'.tr(),
                         style: TextStyle(fontSize: 14, color: Colors.grey),
                       ),
                       Text(
@@ -317,9 +318,9 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
 
           // Timer
           if (hasTimer) ...[
-            const Text(
-              'Timer',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              'timer'.tr(),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Container(
@@ -353,7 +354,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: const Text('Start Timer'),
+                child: Text('startTimer'.tr()),
               ),
             if (_timerService.isRunning)
               ElevatedButton(
@@ -369,7 +370,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: const Text('Stop Timer'),
+                child: Text('stopTimer'.tr()),
               ),
             const SizedBox(height: 32),
           ],
@@ -393,8 +394,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Until it is:',
+                        Text(
+                          'until_it_is'.tr(),
                           style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                         Text(
@@ -428,8 +429,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Notes',
+                        Text(
+                          'notes'.tr(),
                           style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                         Text(
@@ -459,8 +460,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                 ),
                 elevation: 2,
               ),
-              child: const Text(
-                'Done',
+              child: Text(
+                'done'.tr(),
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
@@ -478,8 +479,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 40),
-            const Text(
-              'Congratulations!!',
+            Text(
+              'congratulations'.tr(),
               style: TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.bold,
@@ -488,8 +489,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
               textAlign: TextAlign.center,
               // ,
             ),
-            const Text(
-              'You have just made:',
+            Text(
+              'you_have_made'.tr(),
               style: TextStyle(fontSize: 24),
               textAlign: TextAlign.center,
             ),
@@ -517,8 +518,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                   ),
                   elevation: 2,
                 ),
-                child: const Text(
-                  'Back to Home',
+                child: Text(
+                  'back_to_home'.tr(),
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
               ),

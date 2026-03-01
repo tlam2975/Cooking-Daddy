@@ -5,6 +5,7 @@ import '../services/gemini_service.dart';
 import '../services/ai_interface.dart';
 import '../widgets/quota_indicator.dart';
 import '../widgets/generate_from_ingredients_modal.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class AIFeaturesScreen extends StatefulWidget {
   const AIFeaturesScreen({super.key});
@@ -103,8 +104,8 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
                   Center(
                     child: Column(
                       children: [
-                        const Text(
-                          'AI Features',
+                        Text(
+                          'aiFeatures'.tr(),
                           style: TextStyle(
                             fontSize: 40,
                             fontWeight: FontWeight.w500,
@@ -166,10 +167,10 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
                           Expanded(
                             child: Text(
                               _isChecking
-                                  ? 'Checking server...'
+                                  ? 'checkingServer'.tr()
                                   : _isHealthy
-                                  ? 'Server is running'
-                                  : 'Server offline',
+                                  ? 'serverOnline'.tr()
+                                  : 'serverOffline'.tr(),
                               style: const TextStyle(fontSize: 16),
                             ),
                           ),
@@ -193,7 +194,7 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
 
                     // Feature 1: Generate from Ingredients
                     _buildFeatureCard(
-                      title: 'Generate from Ingredients',
+                      title: 'generate_from_ingredients'.tr(),
                       description: 'Create a recipe from what you have',
                       icon: Icons.auto_awesome,
                       onTap: _showGenerateFromIngredientsModal,
@@ -203,7 +204,7 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
 
                     // Feature 2: Generate from URL
                     _buildFeatureCard(
-                      title: 'Generate from URL',
+                      title: 'generate_from_url'.tr(),
                       description: 'Extract recipe from YouTube or blog',
                       icon: Icons.link,
                       onTap: () => _showUrlDialog(),
@@ -277,29 +278,6 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
   }
 
   Future<void> _showUrlDialog() async {
-    // final result = await showDialog<bool>(
-    //   context: context,
-    //   builder: (context) => AlertDialog(
-    //     title: const Text('Generate from URL'),
-    //     content: TextField(
-    //       controller: _urlController,
-    //       decoration: const InputDecoration(
-    //         hintText: 'https://youtube.com/...',
-    //         border: OutlineInputBorder(),
-    //       ),
-    //     ),
-    //     actions: [
-    //       TextButton(
-    //         onPressed: () => Navigator.pop(context, false),
-    //         child: const Text('Cancel'),
-    //       ),
-    //       TextButton(
-    //         onPressed: () => Navigator.pop(context, true),
-    //         child: const Text('Generate'),
-    //       ),
-    //     ],
-    //   ),
-    // );
     final result = await showModalBottomSheet<AIGenerationResult>(
       context: context,
       isScrollControlled: true,
@@ -319,7 +297,7 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Generating from URL...')));
+        ).showSnackBar(SnackBar(content: Text('generatingRecipe'.tr())));
 
         final aiResult = await _aiService.generateFromUrl(_urlController.text);
 
@@ -327,7 +305,9 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
           if (aiResult.success && aiResult.recipe != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('✅ Generated: ${aiResult.recipe!.name}'),
+                content: Text(
+                  '✅ ${'recipeGenerated'.tr()}: ${aiResult.recipe!.name}',
+                ),
                 backgroundColor: Colors.green,
               ),
             );

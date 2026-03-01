@@ -7,7 +7,7 @@ import 'dart:io';
 
 class GeminiService implements AIInterface {
   //make sure its the damn right IP address alright?
-  final String baseUrl = 'http://192.168.0.235:2975';
+  final String baseUrl = 'http://192.168.100.76:2975';
 
   @override
   Future<AIGenerationResult> generateFromIngredients({

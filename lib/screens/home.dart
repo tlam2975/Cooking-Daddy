@@ -4,6 +4,8 @@ import 'dart:math';
 import 'dart:ui';
 import '../data/repositories/recipe_repository.dart';
 import '../data/models/recipe.dart';
+import 'package:cooking_daddy/main.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 void main() {
   runApp(const CookingDaddyApp());
@@ -17,7 +19,7 @@ class CookingDaddyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: const HomePage(),
-      theme: ThemeData(fontFamily: 'PixelifySans'),
+      // theme: ThemeData(fontFamily: main.fontFamily),
     );
   }
 }
@@ -55,12 +57,12 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Recipe'),
-          content: Text('Are you sure you want to delete "${recipe.name}"?'),
+          title: Text('delete'.tr()),
+          content: Text('delete_confirmation'.tr()),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text('cancel'.tr()),
             ),
             TextButton(
               onPressed: () async {
@@ -68,7 +70,7 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pop(context);
                 _loadRecipes();
               },
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              child: Text('delete'.tr(), style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -166,18 +168,15 @@ class _HomePageState extends State<HomePage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.person, size: 28),
-                    title: const Text(
-                      'Profile',
-                      style: TextStyle(fontSize: 20),
-                    ),
+                    title: Text('profile'.tr(), style: TextStyle(fontSize: 20)),
                     onTap: () {
                       Navigator.pushNamed(context, '/profile');
                     },
                   ),
                   ListTile(
                     leading: const Icon(Icons.settings, size: 28),
-                    title: const Text(
-                      'Settings',
+                    title: Text(
+                      'settings'.tr(),
                       style: TextStyle(fontSize: 20),
                     ),
                     onTap: () {
@@ -186,8 +185,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const Divider(height: 32, thickness: 2),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Categories',
+                  Text(
+                    'category'.tr(),
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 32),
@@ -260,7 +259,7 @@ class _HomePageState extends State<HomePage> {
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Column(
                 children: [
-                  Text(
+                  const Text(
                     'Cooking Daddy',
                     style: TextStyle(
                       fontSize: 40,
@@ -305,8 +304,8 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   child: TextField(
                                     controller: _searchController,
-                                    decoration: const InputDecoration(
-                                      hintText: 'Find something?',
+                                    decoration: InputDecoration(
+                                      hintText: 'findSth'.tr(),
                                       border: InputBorder.none,
                                       hintStyle: TextStyle(color: Colors.grey),
                                     ),
@@ -350,12 +349,12 @@ class _HomePageState extends State<HomePage> {
                               ? Center(
                                   child: Column(
                                     children: [
-                                      const SizedBox(height: 40),
+                                      SizedBox(height: 40),
                                       Text(
                                         _searchController.text.isEmpty &&
                                                 selectedCategoryFilter == null
-                                            ? 'No recipes yet!'
-                                            : 'No recipes found',
+                                            ? 'noRecipesYet'.tr()
+                                            : 'noRecipesFound'.tr(),
                                         style: TextStyle(
                                           fontSize: 20,
                                           color: Colors.grey[600],
@@ -365,8 +364,8 @@ class _HomePageState extends State<HomePage> {
                                       Text(
                                         _searchController.text.isEmpty &&
                                                 selectedCategoryFilter == null
-                                            ? 'Tap "Add recipe!" to create your first recipe'
-                                            : 'Try a different search or category',
+                                            ? 'addRecipeDefault'.tr()
+                                            : 'tryDifferentSearch'.tr(),
                                         style: TextStyle(
                                           fontSize: 14,
                                           color: Colors.grey[500],
@@ -469,9 +468,7 @@ class _HomePageState extends State<HomePage> {
                                                 },
                                                 itemBuilder:
                                                     (BuildContext context) => [
-                                                      const PopupMenuItem<
-                                                        String
-                                                      >(
+                                                      PopupMenuItem<String>(
                                                         value: 'edit',
                                                         child: Row(
                                                           children: [
@@ -481,13 +478,11 @@ class _HomePageState extends State<HomePage> {
                                                                   Colors.black,
                                                             ),
                                                             SizedBox(width: 12),
-                                                            Text('Edit'),
+                                                            Text('edit'.tr()),
                                                           ],
                                                         ),
                                                       ),
-                                                      const PopupMenuItem<
-                                                        String
-                                                      >(
+                                                      PopupMenuItem<String>(
                                                         value: 'delete',
                                                         enabled: true,
                                                         child: Row(
@@ -498,7 +493,7 @@ class _HomePageState extends State<HomePage> {
                                                             ),
                                                             SizedBox(width: 12),
                                                             Text(
-                                                              'Delete',
+                                                              'delete'.tr(),
                                                               style: TextStyle(
                                                                 color:
                                                                     Colors.red,
@@ -519,7 +514,7 @@ class _HomePageState extends State<HomePage> {
                           // Footer
                           const SizedBox(height: 24),
                           Text(
-                            '©2026 Tung Lam created',
+                            'copyright'.tr(),
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[400],
@@ -597,8 +592,8 @@ class _HomePageState extends State<HomePage> {
                               vertical: 12,
                             ),
                           ),
-                          child: const Text(
-                            'Add recipe!',
+                          child: Text(
+                            'add_recipe'.tr(),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,

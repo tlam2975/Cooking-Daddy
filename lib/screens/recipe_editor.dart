@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../data/repositories/recipe_repository.dart';
 import '../services/ai_interface.dart';
 import '../services/gemini_service.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
   final Recipe? recipe;
@@ -68,7 +69,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     if (_urlController.text.trim().isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter a URL first')));
+      ).showSnackBar(SnackBar(content: Text('pleaseEnterURL'.tr())));
       return;
     }
 
@@ -85,7 +86,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '✅ Recipe generated! ${result.remainingQuota ?? 0} uses left',
+              '✅ ${'recipeGenerated'.tr()} ${result.remainingQuota ?? 0} ${'remainingQuota'.tr()}',
             ),
             backgroundColor: Colors.green,
           ),
@@ -213,7 +214,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     child: Column(
                       children: [
                         Text(
-                          'Add a recipe',
+                          'add_recipe'.tr(),
                           style: TextStyle(
                             fontSize: 40,
                             fontWeight: FontWeight.w500,
@@ -302,7 +303,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                           ),
                         ),
                         child: _isGenerating
-                            ? const Row(
+                            ? Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   SizedBox(
@@ -314,26 +315,26 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                     ),
                                   ),
                                   SizedBox(width: 8),
-                                  Text('Analyzing...'),
+                                  Text('analyzing'.tr()),
                                 ],
                               )
-                            : const Text(
-                                'Generate with AI',
+                            : Text(
+                                'generate_with_ai'.tr(),
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                       ),
                     ),
                     const SizedBox(height: 24),
 
-                    _buildTextField('Name*', _nameController),
+                    _buildTextField('name'.tr() + '*', _nameController),
                     const SizedBox(height: 16),
 
                     // Ingredients Field
-                    _buildTextField('Ingredients', _ingredientsController),
+                    _buildTextField('ingredients'.tr(), _ingredientsController),
                     const SizedBox(height: 16),
 
                     // Tools Field
-                    _buildTextField('Tools', _toolsController),
+                    _buildTextField('tools'.tr(), _toolsController),
                     const SizedBox(height: 24),
 
                     // Steps
@@ -383,9 +384,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                     ),
                                     elevation: 2,
                                   ),
-                                  child: const Text(
-                                    'Add step',
-                                    style: TextStyle(fontSize: 16),
+                                  child: Text(
+                                    'add_step'.tr(),
+                                    style: const TextStyle(fontSize: 16),
                                   ),
                                 ),
                                 // Category Dropdown
@@ -407,9 +408,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                   ),
                                   child: DropdownButton<String>(
                                     value: selectedCategory,
-                                    hint: const Text(
-                                      'Category',
-                                      style: TextStyle(
+                                    hint: Text(
+                                      'category'.tr(),
+                                      style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ), // This shows when value is null
@@ -447,10 +448,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Please enter a recipe name',
-                                          ),
+                                        SnackBar(
+                                          content: Text('pleaseEnterName'.tr()),
                                           backgroundColor: Colors.red,
                                         ),
                                       );
@@ -462,9 +461,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
-                                        const SnackBar(
+                                        SnackBar(
                                           content: Text(
-                                            'Please select a category',
+                                            'pleaseSelectCategory'.tr(),
                                           ),
                                           backgroundColor: Colors.red,
                                         ),
@@ -534,9 +533,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
-                                          const SnackBar(
+                                          SnackBar(
                                             content: Text(
-                                              'Recipe updated successfully!',
+                                              'recipe_updated'.tr(),
                                             ),
                                             backgroundColor: Colors.green,
                                             duration: Duration(seconds: 2),
@@ -551,10 +550,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Recipe added successfully!',
-                                            ),
+                                          SnackBar(
+                                            content: Text('recipeAdded'.tr()),
                                             backgroundColor: Colors.green,
                                             duration: Duration(seconds: 2),
                                           ),
@@ -572,7 +569,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'Error: ${e.toString()}',
+                                            'error'.tr() + ': ${e.toString()}',
                                           ),
                                           backgroundColor: Colors.red,
                                           duration: const Duration(seconds: 3),
@@ -592,8 +589,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                   ),
                                   elevation: 2,
                                 ),
-                                child: const Text(
-                                  'Done!',
+                                child: Text(
+                                  'done'.tr(),
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -689,18 +686,18 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
           ),
           const SizedBox(height: 8),
           _buildStepField(
-            'Instruction*',
+            'instruction'.tr(),
             steps[index].instructionController,
             // isRequired: true,
           ),
           const SizedBox(height: 8),
-          _buildStepField('Heat', steps[index].heatController),
+          _buildStepField('heat'.tr(), steps[index].heatController),
           const SizedBox(height: 8),
-          _buildStepField('Seasonings', steps[index].seasoningsController),
+          _buildStepField('seasonings'.tr(), steps[index].seasoningsController),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Text('Timer:', style: TextStyle(fontSize: 16)),
+              Text('timer'.tr(), style: TextStyle(fontSize: 16)),
               const SizedBox(width: 16),
               SizedBox(
                 width: 60,
@@ -731,10 +728,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _buildStepField('Notes', steps[index].notesController),
+          _buildStepField('notes'.tr(), steps[index].notesController),
           const SizedBox(height: 8),
           _buildStepField(
-            'What to look for',
+            'lookFor'.tr(),
             steps[index].lookForController,
             // isRequired: true,
           ),

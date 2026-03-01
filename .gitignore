@@ -12,7 +12,7 @@
 .swiftpm/
 migrate_working_dir/
 notes.md
-test_gemini.dart
+test.dart
 
 # IntelliJ related
 *.iml
