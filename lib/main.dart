@@ -1,7 +1,8 @@
+import 'package:cooking_daddy/data/repositories/recipe_repository.dart';
 import 'package:flutter/material.dart';
 import 'data/datasources/isar_datasource.dart';
 import 'data/models/recipe.dart';
-// import 'data/models/category.dart';
+import 'data/models/category.dart';
 import 'screens/home.dart';
 import 'screens/recipe_editor.dart';
 import 'screens/cooking_session.dart';
@@ -37,6 +38,7 @@ void main() async {
 
 class CookingDaddyApp extends StatelessWidget {
   const CookingDaddyApp({super.key});
+  // final RecipeRepository _repository = RecipeRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +50,13 @@ class CookingDaddyApp extends StatelessWidget {
       supportedLocales: context.supportedLocales,
       locale: context.locale,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(fontFamily: fontFamily),
+      theme: ThemeData(
+        fontFamily: fontFamily,
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(fontWeight: FontWeight.w300),
+          bodyMedium: TextStyle(fontWeight: FontWeight.w300),
+        ).apply(fontFamily: fontFamily),
+      ),
       initialRoute: '/home',
       routes: {
         '/home': (context) => const HomePage(),

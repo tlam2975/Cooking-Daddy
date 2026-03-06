@@ -1,5 +1,5 @@
-import google.generativeai as genai
-# import google.genai
+# import google.generativeai as genai
+import google.genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
@@ -7,6 +7,17 @@ import json
 from dotenv import load_dotenv
 from colorama import Fore, Style
 import requests
+from youtube_transcript_api import YouTubeTranscriptApi
+import re
+import logging
+from fastapi import HTTPException
+from bs4 import BeautifulSoup
+from youtube_transcript_api._errors import (
+    TranscriptsDisabled,
+    NoTranscriptFound,
+    VideoUnavailable,
+    CouldNotRetrieveTranscript,
+)
 
 # Load environment variables
 load_dotenv()
@@ -110,24 +121,123 @@ The response should be in JSON format."""
 
 
 #Extract recipe from URL
-def build_url_prompt(url):
-    """Build prompt for URL extraction"""
-    prompt = f"""Extract a recipe from this URL: {url}
-
-Please return in this very specific fields: name, ingredients, tools, steps[step(instruction(str), heat(str), time(int), seasoning(str), notes(str), whatToLookFor(str))].
-
-The fields name, steps(instruction, whatToLookFor) are required, the rest are optional.
-Timer is saved in seconds as int (3 minutes 20 seconds will be saved as 200).
-Also note that the field "item" should return all items in a single string separated by comma, not a list. For example: "item1 40g, item2 2kg, item3 100g". Do not return it as a list.
-
-
-Please return the exact format as specified, and nothing else. Do not include any additional text or explanations. If notes, heat and timer are blank, then simply leave them out of that step
-The response should be in JSON format."""
+def build_url_prompt(url: str) -> str:
+    """
+    Build prompt for URL-based recipe generation
+    Handles both YouTube videos and regular webpages
+    """
     
-    global order
-    order += 1
-    print(f'{Fore.GREEN}Order: {order}{Style.RESET_ALL}')
-    print(f'{Fore.CYAN}Prompt: {prompt}{Style.RESET_ALL}')
+    # ========== YOUTUBE HANDLING ==========
+    if 'youtube.com' in url or 'youtu.be' in url:
+        try:
+            from youtube_service import YouTubeService
+            
+            youtube_service = YouTubeService()
+            
+            # Extract video ID
+            video_id = youtube_service.extract_video_id(url)
+            print(f'🎥 YouTube video detected: {video_id}')
+            
+            # Get metadata
+            metadata = youtube_service.get_video_metadata(url)
+            print(f'📹 Video title: {metadata["title"]}')
+            
+            # Get transcript
+            transcript_segments = youtube_service.get_transcript_detailed(
+                video_id,
+                languages=["en", "vi", "en-US", "en-GB"]
+            )
+            
+            # Combine transcript text
+            transcript_text = ' '.join(segment['text'] for segment in transcript_segments)
+            
+            print(f'✅ Got transcript: {len(transcript_text)} characters')
+            
+            # Build YouTube-specific prompt
+            prompt = f"""Extract a recipe from this YouTube video transcript:
+
+Video Title: {metadata['title']}
+Uploader: {metadata.get('uploader', 'Unknown')}
+
+Transcript:
+{transcript_text}
+
+Based on this transcript, extract the cooking recipe with exact instructions, ingredients, and timing mentioned in the video.
+"""
+            
+        except Exception as e:
+            print(f'❌ YouTube error: {e}')
+            raise Exception(f"Could not get YouTube transcript: {str(e)}")
+    
+    # ========== WEBPAGE HANDLING ==========
+    else:
+        try:
+            import requests
+            from bs4 import BeautifulSoup
+            
+            print(f'{Fore.LIGHTBLUE_EX}🌐 Fetching webpage: {url}')
+            
+            response = requests.get(url, timeout=10)
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Remove scripts and styles
+            for script in soup(["script", "style"]):
+                script.decompose()
+            
+            # Get text
+            text = soup.get_text()
+            lines = (line.strip() for line in text.splitlines())
+            text = '\n'.join(line for line in lines if line)
+            
+            # Get title
+            title = soup.find('title')
+            title_text = title.get_text() if title else 'Unknown'
+            
+            # Limit content
+            content = text[:5000]
+            
+            print(f'✅ Got webpage: {len(content)} characters')
+            
+            # Build webpage-specific prompt
+            prompt = f"""Extract a recipe from this webpage:
+
+Title: {title_text}
+
+Content:
+{content}
+
+Based on this webpage content, extract the cooking recipe.
+"""
+            
+        except Exception as e:
+            print(f'❌ Webpage error: {e}')
+            raise Exception(f"Could not fetch webpage: {str(e)}")
+    
+    # ========== COMMON FORMAT REQUIREMENTS ==========
+    prompt += """
+
+Return ONLY a JSON object with this exact structure:
+{
+  "name": "Recipe name",
+  "category": "Breakfast/Lunch/Dinner/Dessert/Drinks/Lazy meals",
+  "ingredients": "ingredient1, ingredient2, ...",
+  "tools": "tool1, tool2, ...",
+  "steps": [
+    {
+      "instruction": "Step description",
+      "heat": "High/Medium/Low/Off",
+      "time": 200,
+      "seasoning": "salt, pepper",
+      "notes": "Tips",
+      "whatToLookFor": "Visual cues"
+    }
+  ]
+}
+
+All measurements in metric (grams, liters, cm).
+Timer in seconds as int.
+Don't add too many extra ingredients beyond what's mentioned.
+"""
     
     return prompt
 
@@ -527,10 +637,11 @@ if __name__ == '__main__':
         exit(1)
     
     PORT = 2975
-    
+
+    print('')
     print('🚀 Cooking Daddy API Server')
-    print(f'📍 http://localhost:{PORT}')
-    print(f'💚 Health: http://localhost:{PORT}/health')
+    print(f'{Fore.YELLOW}📍 http://localhost:{PORT}')
+    print(f'💚 {Fore.YELLOW}Health: http://localhost:{PORT}/health')
     print('')
     
     app.run(host='0.0.0.0', port=PORT, debug=True)

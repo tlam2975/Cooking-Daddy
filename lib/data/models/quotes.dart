@@ -1,3 +1,4 @@
+// EN
 final List<String> cookingQuotes = [
   'just like how ur mom makes it',
   'oui chef!',
@@ -25,4 +26,34 @@ final List<String> cookingQuotes = [
   'clean your station!',
   'we are Asians, we don\'t measure',
   'voila!',
+  'Itadakimasu',
+];
+
+// VI
+final List<String> cookingQuotesVi = [
+  'như mẹ nấu ấy',
+  'oui chef!',
+  'vì bố cũng có thể nấu mà',
+  'fuiyoooooooo',
+  "làm ơn đừng làm hỏng nó",
+  'Itadakimasu',
+  "haiyaaa đừng làm hỏng nó",
+  'u are really cooking, arent ya?',
+  'sheeeeeeesh',
+  'quay lại làm việc đi đầu bếp',
+  'WHERE IS THE LAMB SAUCE?!',
+  'idiot sandwich!',
+  'IT\'S RAAAAAAW!',
+  'cuối cùng cũng có đồ ăn ngon',
+  'bone apple tea!',
+  'nghe lời tổ tiên đi...',
+  'đừng có là cái bánh donut!',
+  'đóng cửa đi!',
+  'nhìn cái mớ hỗn độn này!',
+  'THỨC DẬY!',
+  'MSG là vua',
+  'buồn trong lòng',
+  'gia vị đâu rồi?!',
+  'dọn sạch chỗ làm đi!',
+  'chúng ta là người châu Á, chúng ta không đo lường',
 ];

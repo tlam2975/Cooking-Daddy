@@ -24,15 +24,6 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   //Controls Step showing status
   bool showSteps = false;
 
-  // final List<String> quotes = [
-  //   'just like how ur mom makes it',
-  //   'oui chef!',
-  //   'cause dads can cook too',
-  //   'fuiyoooooooo',
-  //   "please don't mess it up",
-  //   'about to be an influencer',
-  // ];
-
   @override
   void initState() {
     super.initState();
@@ -232,7 +223,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    '${recipe!.steps.length} steps',
+                                    '${recipe!.steps.length} ${'stepCounter'.tr()}',
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,

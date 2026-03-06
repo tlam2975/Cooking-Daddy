@@ -7,6 +7,7 @@ import '../data/repositories/recipe_repository.dart';
 import '../services/ai_interface.dart';
 import '../services/gemini_service.dart';
 import 'package:easy_localization/easy_localization.dart';
+import '../data/models/list_categories.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
   final Recipe? recipe;
@@ -25,15 +26,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   final AIInterface _aiService = GeminiService();
   bool _isGenerating = false;
   // List of categories
-  final List<String> categories = [
-    'Homecook',
-    'Lazy meals',
-    'Breakfast',
-    'Lunch',
-    'Dinner',
-    'Dessert',
-    'Drinks',
-  ];
+  List<String> get categories {
+    return CategoryData.getCategories(context.locale.languageCode);
+  }
 
   late String randomQuote;
 

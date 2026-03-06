@@ -4,8 +4,9 @@ import 'dart:math';
 import 'dart:ui';
 import '../data/repositories/recipe_repository.dart';
 import '../data/models/recipe.dart';
-import 'package:cooking_daddy/main.dart';
+// import 'package:cooking_daddy/main.dart';
 import 'package:easy_localization/easy_localization.dart';
+import '../data/models/list_categories.dart';
 
 void main() {
   runApp(const CookingDaddyApp());
@@ -43,14 +44,18 @@ class _HomePageState extends State<HomePage> {
   String? selectedCategoryFilter;
 
   // List of categories
-  final List<String> categories = [
-    'Breakfast',
-    'Lunch',
-    'Dinner',
-    'Lazy meals',
-    'Dessert',
-    'Drinks',
-  ];
+  // final List<String> categories = [
+  //   'Breakfast',
+  //   'Lunch',
+  //   'Dinner',
+  //   'Lazy meals',
+  //   'Dessert',
+  //   'Drinks',
+  // ];
+
+  List<String> get categories {
+    return CategoryData.getCategories(context.locale.languageCode);
+  }
 
   void _showDeleteConfirmation(Recipe recipe) {
     showDialog(
@@ -85,6 +90,7 @@ class _HomePageState extends State<HomePage> {
     Future.delayed(Duration(milliseconds: 100));
     _loadRecipes();
     _searchController.addListener(_onSearchChanged);
+    _debugCurrentCategories(); // ← Add this line
   }
 
   void _pickRandomQuote() {
@@ -92,6 +98,17 @@ class _HomePageState extends State<HomePage> {
       randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
       print('Quote picked: $randomQuote');
     });
+  }
+
+  // Add at the top of _HomeScreenState class
+  Future<void> _debugCurrentCategories() async {
+    final recipes = await _repository.getAllRecipes();
+
+    print('=== DEBUG: CURRENT CATEGORIES IN DATABASE ===');
+    for (var recipe in recipes) {
+      print('Recipe: "${recipe.name}" → category: "${recipe.category}"');
+    }
+    print('=== END DEBUG ===');
   }
 
   Future<void> _loadRecipes() async {
@@ -329,9 +346,7 @@ class _HomePageState extends State<HomePage> {
                               child: Row(
                                 children: [
                                   Chip(
-                                    label: Text(
-                                      'Category: $selectedCategoryFilter',
-                                    ),
+                                    label: Text('$selectedCategoryFilter'),
                                     onDeleted: () => _filterByCategory(null),
                                     deleteIcon: const Icon(
                                       Icons.close,
@@ -433,7 +448,7 @@ class _HomePageState extends State<HomePage> {
                                                       ),
                                                       const SizedBox(height: 8),
                                                       Text(
-                                                        '${recipe.category}, ${recipe.steps.length} steps',
+                                                        '${recipe.category.tr()}, ${recipe.steps.length} ${'stepCounter'.tr()}',
                                                         style: TextStyle(
                                                           fontSize: 16,
                                                           color:
