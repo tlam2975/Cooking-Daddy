@@ -21,4 +21,5 @@ And with user tapping in a recipe, it will then open the screen showing details 
 At this version, the app now has many features that will make the experience more appealing
 
 LANGUAGE: the app now officially supports Vietnamese. 
+FEATURE: AI supports making recipes based on available ingredients
 
