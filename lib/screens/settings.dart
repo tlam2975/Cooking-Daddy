@@ -56,7 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         const Text(
                           'Cooking Daddy',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 40,
                             color: Color.fromARGB(255, 255, 230, 0),
                           ),

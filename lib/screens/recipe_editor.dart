@@ -8,6 +8,7 @@ import '../services/ai_interface.dart';
 import '../services/gemini_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../data/models/list_categories.dart';
+// import '../data/models/category.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
   final Recipe? recipe;
@@ -26,9 +27,6 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   final AIInterface _aiService = GeminiService();
   bool _isGenerating = false;
   // List of categories
-  List<String> get categories {
-    return CategoryData.getCategories(context.locale.languageCode);
-  }
 
   late String randomQuote;
 
@@ -36,6 +34,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
 
   List<StepData> steps = [StepData()]; // Start with one step
   String? selectedCategory;
+
+  Future<List<String>> _loadCategories() async {
+    return await CategoryData.getDisplayNames(context.locale.languageCode);
+  }
 
   @override
   void dispose() {
@@ -104,7 +106,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       _nameController.text = recipe.name;
       _ingredientsController.text = recipe.ingredients;
       _toolsController.text = recipe.tools;
-      selectedCategory = recipe.category;
+      selectedCategory = recipe.categoryKey;
 
       // Clear and fill steps
       steps.clear();
@@ -148,7 +150,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       _urlController.text = widget.recipe!.url ?? '';
       _ingredientsController.text = widget.recipe!.ingredients;
       _toolsController.text = widget.recipe!.tools;
-      selectedCategory = widget.recipe!.category;
+      selectedCategory = widget.recipe!.categoryKey;
 
       // Pre-fill steps
       steps = widget.recipe!.steps.map((step) {
@@ -175,6 +177,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentFont = context.locale.languageCode == 'vi'
+        ? 'DarleySans'
+        : 'Caveat';
+
     return Scaffold(
       backgroundColor: const Color(0xFFFFEAEA), // Updated background color
       body: SafeArea(
@@ -321,7 +327,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    _buildTextField('name'.tr() + '*', _nameController),
+                    _buildTextField('${'name'.tr()}*', _nameController),
                     const SizedBox(height: 16),
 
                     // Ingredients Field
@@ -385,6 +391,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                   ),
                                 ),
                                 // Category Dropdown
+                                // Category Dropdown
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
@@ -401,31 +408,53 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: DropdownButton<String>(
-                                    value: selectedCategory,
-                                    hint: Text(
-                                      'category'.tr(),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ), // This shows when value is null
-                                    underline: const SizedBox(),
-                                    icon: const Icon(Icons.arrow_drop_down),
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 16,
-                                      fontFamily: 'Caveat',
-                                    ),
-                                    items: categories.map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value),
+                                  child: FutureBuilder<List<String>>(
+                                    future: _loadCategories(),
+                                    builder: (context, snapshot) {
+                                      if (!snapshot.hasData) {
+                                        return const SizedBox(
+                                          width: 120,
+                                          child: Center(
+                                            child: SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+
+                                      final categories = snapshot.data!;
+
+                                      return DropdownButton<String>(
+                                        value: selectedCategory,
+                                        hint: Text(
+                                          'category'.tr(),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        underline: const SizedBox(),
+                                        icon: const Icon(Icons.arrow_drop_down),
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontFamily: currentFont,
+                                        ),
+                                        items: categories.map((String value) {
+                                          return DropdownMenuItem<String>(
+                                            value: value,
+                                            child: Text(value),
+                                          );
+                                        }).toList(),
+                                        onChanged: (String? newValue) {
+                                          setState(() {
+                                            selectedCategory = newValue;
+                                          });
+                                        },
                                       );
-                                    }).toList(),
-                                    onChanged: (String? newValue) {
-                                      setState(() {
-                                        selectedCategory = newValue;
-                                      });
                                     },
                                   ),
                                 ),
@@ -474,7 +503,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                           : _urlController.text,
                                       ingredients: _ingredientsController.text,
                                       tools: _toolsController.text,
-                                      category: selectedCategory!,
+                                      categoryKey: selectedCategory!,
                                       createdDate:
                                           widget.recipe?.createdDate ??
                                           DateTime.now(),
@@ -564,7 +593,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'error'.tr() + ': ${e.toString()}',
+                                            '${'error'.tr()}: ${e.toString()}',
                                           ),
                                           backgroundColor: Colors.red,
                                           duration: const Duration(seconds: 3),
@@ -667,7 +696,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Step ${index + 1}',
+                '${'step'.tr()} ${index + 1}',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,

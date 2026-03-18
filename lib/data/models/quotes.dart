@@ -6,7 +6,7 @@ final List<String> cookingQuotes = [
   'fuiyoooooooo',
   "please don't mess it up",
   'about to be an influencer',
-  "haiyaaa don't mess it up",
+  "DONT'T FK IT UP",
   'u are really cooking, arent ya?',
   'sheeeeeeesh',
   'back to work chef',
@@ -27,19 +27,22 @@ final List<String> cookingQuotes = [
   'we are Asians, we don\'t measure',
   'voila!',
   'Itadakimasu',
+  'XOXO',
 ];
 
 // VI
 final List<String> cookingQuotesVi = [
-  'như mẹ nấu ấy',
+  'như mẹ nấu ấy mà',
   'oui chef!',
-  'vì bố cũng có thể nấu mà',
+  'đàn ông vào bếp, oke?',
+  'chà chà',
   'fuiyoooooooo',
-  "làm ơn đừng làm hỏng nó",
+  'XOXO'
+      "làm ơn đừng làm hỏng nó",
   'Itadakimasu',
   "haiyaaa đừng làm hỏng nó",
   'u are really cooking, arent ya?',
-  'sheeeeeeesh',
+  'có được việc không đấy?',
   'quay lại làm việc đi đầu bếp',
   'WHERE IS THE LAMB SAUCE?!',
   'idiot sandwich!',

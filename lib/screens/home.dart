@@ -7,6 +7,7 @@ import '../data/models/recipe.dart';
 // import 'package:cooking_daddy/main.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../data/models/list_categories.dart';
+import 'dart:async';
 
 void main() {
   runApp(const CookingDaddyApp());
@@ -53,8 +54,23 @@ class _HomePageState extends State<HomePage> {
   //   'Drinks',
   // ];
 
-  List<String> get categories {
-    return CategoryData.getCategories(context.locale.languageCode);
+  // List<String> get categories {
+  //   return CategoryData.getDisplayNames(context.locale.languageCode);
+  // }
+
+  Future<bool> _isSelectedCategory(String categoryDisplay) async {
+    if (selectedCategoryFilter == null) return false;
+
+    final key = await CategoryData.getKeyFromDisplay(
+      categoryDisplay,
+      context.locale.languageCode,
+    );
+
+    return key == selectedCategoryFilter;
+  }
+
+  Future<List<String>> _loadCategories() async {
+    return await CategoryData.getDisplayNames(context.locale.languageCode);
   }
 
   void _showDeleteConfirmation(Recipe recipe) {
@@ -106,7 +122,7 @@ class _HomePageState extends State<HomePage> {
 
     print('=== DEBUG: CURRENT CATEGORIES IN DATABASE ===');
     for (var recipe in recipes) {
-      print('Recipe: "${recipe.name}" → category: "${recipe.category}"');
+      print('Recipe: "${recipe.name}" → category: "${recipe.categoryKey}"');
     }
     print('=== END DEBUG ===');
   }
@@ -125,10 +141,23 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _filterByCategory(String? category) {
-    setState(() {
-      selectedCategoryFilter = category;
-    });
+  Future<void> _filterByCategory(String? categoryDisplay) async {
+    if (categoryDisplay == null) {
+      setState(() {
+        selectedCategoryFilter = null;
+      });
+    } else {
+      // Convert display name to key
+      final key = await CategoryData.getKeyFromDisplay(
+        categoryDisplay,
+        context.locale.languageCode,
+      );
+
+      setState(() {
+        selectedCategoryFilter = key; // Store key, not display
+      });
+    }
+
     _filterRecipes();
 
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
@@ -152,7 +181,7 @@ class _HomePageState extends State<HomePage> {
 
         final matchesCategory =
             selectedCategoryFilter == null ||
-            recipe.category == selectedCategoryFilter;
+            recipe.categoryKey == selectedCategoryFilter;
 
         return matchesSearch && matchesCategory;
       }).toList();
@@ -208,51 +237,75 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 32),
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: categories.length,
-                      itemBuilder: (context, index) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                _filterByCategory(categories[index]);
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12.0,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      categories[index],
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                    child: FutureBuilder<List<String>>(
+                      future: _loadCategories(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        final categories = snapshot.data!;
+
+                        return ListView.builder(
+                          itemCount: categories.length,
+                          itemBuilder: (context, index) {
+                            final categoryDisplay = categories[index];
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                InkWell(
+                                  onTap: () {
+                                    _filterByCategory(categoryDisplay);
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12.0,
                                     ),
-                                    if (selectedCategoryFilter ==
-                                        categories[index])
-                                      const Icon(
-                                        Icons.check,
-                                        color: Colors.black,
-                                      ),
-                                  ],
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          categoryDisplay,
+                                          style: const TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        // Show checkmark if this category is selected
+                                        FutureBuilder<bool>(
+                                          future: _isSelectedCategory(
+                                            categoryDisplay,
+                                          ),
+                                          builder: (context, checkSnapshot) {
+                                            if (checkSnapshot.data == true) {
+                                              return const Icon(
+                                                Icons.check,
+                                                color: Colors.black,
+                                              );
+                                            }
+                                            return const SizedBox.shrink();
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                            ...List.generate(
-                              3,
-                              (lineIndex) => Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                height: 2,
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                          ],
+                                ...List.generate(
+                                  3,
+                                  (lineIndex) => Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    height: 2,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                            );
+                          },
                         );
                       },
                     ),
@@ -281,7 +334,7 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(
                       fontSize: 40,
                       fontWeight: FontWeight.w500,
-                      color: const Color.fromARGB(255, 255, 230, 0),
+                      color: Color.fromARGB(255, 255, 230, 0),
                       letterSpacing: 2,
                     ),
                   ),
@@ -346,7 +399,12 @@ class _HomePageState extends State<HomePage> {
                               child: Row(
                                 children: [
                                   Chip(
-                                    label: Text('$selectedCategoryFilter'),
+                                    label: Text(
+                                      CategoryData.getDisplayName(
+                                        selectedCategoryFilter!,
+                                        context.locale.languageCode,
+                                      ),
+                                    ),
                                     onDeleted: () => _filterByCategory(null),
                                     deleteIcon: const Icon(
                                       Icons.close,
@@ -448,7 +506,7 @@ class _HomePageState extends State<HomePage> {
                                                       ),
                                                       const SizedBox(height: 8),
                                                       Text(
-                                                        '${recipe.category.tr()}, ${recipe.steps.length} ${'stepCounter'.tr()}',
+                                                        '${CategoryData.getDisplayName(recipe.categoryKey, context.locale.languageCode)}, ${recipe.steps.length} ${'stepCounter'.tr()}',
                                                         style: TextStyle(
                                                           fontSize: 16,
                                                           color:

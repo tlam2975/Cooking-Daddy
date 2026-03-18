@@ -195,7 +195,7 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
                     // Feature 1: Generate from Ingredients
                     _buildFeatureCard(
                       title: 'generate_from_ingredients'.tr(),
-                      description: 'Create a recipe from what you have',
+                      description: 'generate_from_recipe_description'.tr(),
                       icon: Icons.auto_awesome,
                       onTap: _showGenerateFromIngredientsModal,
                     ),
@@ -205,7 +205,7 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
                     // Feature 2: Generate from URL
                     _buildFeatureCard(
                       title: 'generate_from_url'.tr(),
-                      description: 'Extract recipe from YouTube or blog',
+                      description: 'generate_from_url_description'.tr(),
                       icon: Icons.link,
                       onTap: () => _showUrlDialog(),
                     ),

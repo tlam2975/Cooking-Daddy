@@ -92,5 +92,7 @@
     "recipeAdded": "Recipe added!",
     "recipeDeleted": "Recipe deleted!",
     "error": "Error",
-    "intruction": "Instructions"
+    "instruction": "Instructions",
+    "generate_from_url_description": "Extract recipe from YouTube or blog",
+    "generate_from_recipe_description": "Create a recipe from what you have"
 }

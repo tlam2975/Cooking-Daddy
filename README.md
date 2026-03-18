@@ -16,3 +16,9 @@ When open the app, you will see the main screen, which displays all recipes you 
 
 And with user tapping in a recipe, it will then open the screen showing details of the recipe (like tools, steps, etc).From that, user can further choose "Start" button to start the most interesting part. Now, it will sequencially showing each step, including instruction, goal, notes and a timer that user have provided. This feature tells user exactly what each step is for, what a complete step is (to avoid underdone it). I belive this is really neccessary to newbie chefs, since they can really keep things on track.
 
+## Updated Features
+
+At this version, the app now has many features that will make the experience more appealing
+
+LANGUAGE: the app now officially supports Vietnamese. 
+

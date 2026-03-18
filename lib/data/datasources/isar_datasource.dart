@@ -1,21 +1,81 @@
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
-import '../models/category.dart';
 import '../models/recipe.dart';
+import '../models/category.dart';
+import '../models/list_categories.dart';
 
 class IsarDatasource {
   static late Isar isar;
+
+  static Future<void> migrateCategoryKeys() async {
+    print('🔄 Fixing empty category keys...');
+
+    final recipes = await isar.recipes.where().findAll();
+
+    if (recipes.isEmpty) {
+      print('✅ No recipes to migrate');
+      return;
+    }
+
+    await isar.writeTxn(() async {
+      for (var recipe in recipes) {
+        // If categoryKey is empty, assign default
+        if (recipe.categoryKey.isEmpty) {
+          // Assign default category based on recipe name
+          String defaultKey = 'dinner'; // Default fallback
+
+          if (recipe.name.toLowerCase().contains('egg')) {
+            defaultKey = 'breakfast';
+          } else if (recipe.name.toLowerCase().contains('coffee')) {
+            defaultKey = 'drinks';
+          } else if (recipe.name.toLowerCase().contains('cookie')) {
+            defaultKey = 'dessert';
+          }
+
+          print('Fixing: "${recipe.name}" → empty → "$defaultKey"');
+          recipe.categoryKey = defaultKey;
+          await isar.recipes.put(recipe);
+        }
+      }
+    });
+
+    print('✅ Migration complete!');
+  }
 
   static Future<void> initialize() async {
     print('IsarDatasource: Starting initialization...');
     final dir = await getApplicationDocumentsDirectory();
     print('IsarDatasource: Got directory: ${dir.path}');
 
-    isar = await Isar.open([CategorySchema, RecipeSchema], directory: dir.path);
+    // Add CategorySchema
+    isar = await Isar.open([RecipeSchema, CategorySchema], directory: dir.path);
     print('IsarDatasource: Isar opened successfully!');
 
+    await _seedBuiltInCategories();
     await _addDefaultDataIfEmpty();
     print('IsarDatasource: Initialization complete!');
+  }
+
+  // Seed built-in categories on first launch
+  static Future<void> _seedBuiltInCategories() async {
+    final count = await isar.categorys.count();
+
+    if (count == 0) {
+      print('🌱 Seeding built-in categories...');
+
+      await isar.writeTxn(() async {
+        for (var key in CategoryData.categoryKeys) {
+          final category = Category(
+            key: key,
+            isBuiltIn: true,
+            createdDate: DateTime.now(),
+          );
+          await isar.categorys.put(category);
+        }
+      });
+
+      print('✅ Built-in categories seeded');
+    }
   }
 
   static Future<void> _addDefaultDataIfEmpty() async {
@@ -31,7 +91,7 @@ class IsarDatasource {
         name: 'Scrambled Eggs',
         ingredients: '2 eggs, Salt, Pepper, Butter',
         tools: 'Pan, Spatula, Bowl',
-        category: 'Breakfast', // Changed from categoryId to category
+        categoryKey: 'breakfast',
         createdDate: DateTime.now(),
         steps: [
           Step(
@@ -61,7 +121,7 @@ class IsarDatasource {
         name: 'Simple Pasta',
         ingredients: '200g pasta, Salt, Olive oil, Garlic',
         tools: 'Pot, Colander, Pan',
-        category: 'Dinner', // Changed from categoryId to category
+        categoryKey: 'dinner',
         createdDate: DateTime.now(),
         steps: [
           Step(
@@ -90,7 +150,7 @@ class IsarDatasource {
         name: 'Soft Boiled Egg',
         ingredients: 'Egg, Water, Salt',
         tools: 'Pot, Spoon',
-        category: 'Lazy meals',
+        categoryKey: 'lazy_meals',
         createdDate: DateTime.now(),
         steps: [
           Step(
@@ -119,6 +179,46 @@ class IsarDatasource {
     });
   }
 
+  // ========== CATEGORY CRUD ==========
+
+  Future<List<Category>> getAllCategories() async {
+    return await isar.categorys.where().sortByCreatedDate().findAll();
+  }
+
+  Future<List<Category>> getBuiltInCategories() async {
+    return await isar.categorys.filter().isBuiltInEqualTo(true).findAll();
+  }
+
+  Future<List<Category>> getCustomCategories() async {
+    return await isar.categorys.filter().isBuiltInEqualTo(false).findAll();
+  }
+
+  Future<Category?> getCategoryByKey(String key) async {
+    return await isar.categorys.filter().keyEqualTo(key).findFirst();
+  }
+
+  Future<void> addCustomCategory(String key) async {
+    await isar.writeTxn(() async {
+      final category = Category(
+        key: key,
+        isBuiltIn: false,
+        createdDate: DateTime.now(),
+      );
+      await isar.categorys.put(category);
+    });
+  }
+
+  Future<void> deleteCustomCategory(String key) async {
+    final category = await getCategoryByKey(key);
+    if (category != null && !category.isBuiltIn) {
+      await isar.writeTxn(() async {
+        await isar.categorys.delete(category.id);
+      });
+    }
+  }
+
+  // ========== RECIPE CRUD ==========
+
   Future<List<Recipe>> getAllRecipes() async {
     return await isar.recipes.where().findAll();
   }
@@ -141,14 +241,11 @@ class IsarDatasource {
     });
   }
 
-  Future<void> addCategory(Category category) async {
-    await isar.writeTxn(() async {
-      await isar.categorys.put(category);
-    });
-  }
-
-  Future<List<Recipe>> getRecipesByCategory(String categoryName) async {
-    return await isar.recipes.filter().categoryEqualTo(categoryName).findAll();
+  Future<List<Recipe>> getRecipesByCategory(String categoryKey) async {
+    return await isar.recipes
+        .filter()
+        .categoryKeyEqualTo(categoryKey)
+        .findAll();
   }
 
   Future<List<Recipe>> searchRecipesByName(String query) async {
@@ -156,15 +253,5 @@ class IsarDatasource {
         .filter()
         .nameContains(query, caseSensitive: false)
         .findAll();
-  }
-
-  Future<List<String>> getCategoryNames() async {
-    final categories = await isar.categorys.where().findAll();
-    return categories.map((c) => c.name).toList();
-  }
-
-  Future<String> getCategoryNameById(int categoryId) async {
-    final category = await isar.categorys.get(categoryId);
-    return category?.name ?? 'Unknown';
   }
 }

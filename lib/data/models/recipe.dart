@@ -11,7 +11,7 @@ class Recipe {
   late String tools;
 
   @Index() // Add index for fast filtering
-  late String category; // Changed from categoryId to category (String)
+  late String categoryKey; // Changed from categoryId to category (String)
 
   late DateTime createdDate;
   List<Step> steps = [];
@@ -21,7 +21,7 @@ class Recipe {
     this.url,
     required this.ingredients,
     required this.tools,
-    required this.category, // Changed
+    required this.categoryKey, // Changed
     required this.createdDate,
     this.steps = const [],
   });

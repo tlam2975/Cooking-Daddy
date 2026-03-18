@@ -6,7 +6,16 @@ part 'category.g.dart';
 class Category {
   Id id = Isar.autoIncrement;
 
-  late String name;
+  @Index(unique: true)
+  late String key; // "breakfast", "lunch", "user_custom_123"
 
-  Category({required this.name});
+  late bool isBuiltIn; // true = system category, false = user-created
+
+  late DateTime createdDate;
+
+  Category({
+    required this.key,
+    required this.isBuiltIn,
+    required this.createdDate,
+  });
 }

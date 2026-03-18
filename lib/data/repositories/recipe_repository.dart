@@ -5,21 +5,18 @@ import '../datasources/isar_datasource.dart';
 class RecipeRepository {
   final IsarDatasource _datasource = IsarDatasource();
 
+  // ========== RECIPE METHODS ==========
+
   Future<List<Recipe>> getAllRecipes() async {
     return await _datasource.getAllRecipes();
   }
 
-  // Get single recipe by ID
   Future<Recipe?> getRecipe(int id) async {
     return await IsarDatasource.isar.recipes.get(id);
   }
 
   Future<void> addRecipe(Recipe recipe) async {
     await _datasource.addRecipe(recipe);
-  }
-
-  Future<List<Recipe>> searchRecipesByName(String query) async {
-    return await _datasource.searchRecipesByName(query);
   }
 
   Future<void> updateRecipe(Recipe recipe) async {
@@ -30,19 +27,37 @@ class RecipeRepository {
     await _datasource.deleteRecipe(id);
   }
 
-  Future<void> addCategory(Category category) async {
-    await _datasource.addCategory(category);
+  Future<List<Recipe>> getRecipesByCategory(String categoryKey) async {
+    return await _datasource.getRecipesByCategory(categoryKey);
   }
 
-  Future<List<Recipe>> getRecipesByCategory(String categoryName) async {
-    return await _datasource.getRecipesByCategory(categoryName);
+  Future<List<Recipe>> searchRecipesByName(String query) async {
+    return await _datasource.searchRecipesByName(query);
   }
 
-  Future<List<String>> getCategoryNames() async {
-    return await _datasource.getCategoryNames();
+  // ========== CATEGORY METHODS ==========
+
+  Future<List<Category>> getAllCategories() async {
+    return await _datasource.getAllCategories();
   }
 
-  // Future<String> getCategoryName(int categoryId) async {
-  //   return await IsarDatasource().getCategoryNameById(categoryId);
-  // }
+  Future<List<Category>> getBuiltInCategories() async {
+    return await _datasource.getBuiltInCategories();
+  }
+
+  Future<List<Category>> getCustomCategories() async {
+    return await _datasource.getCustomCategories();
+  }
+
+  Future<Category?> getCategoryByKey(String key) async {
+    return await _datasource.getCategoryByKey(key);
+  }
+
+  Future<void> addCustomCategory(String key) async {
+    await _datasource.addCustomCategory(key);
+  }
+
+  Future<void> deleteCustomCategory(String key) async {
+    await _datasource.deleteCustomCategory(key);
+  }
 }

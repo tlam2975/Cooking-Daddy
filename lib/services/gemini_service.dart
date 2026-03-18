@@ -215,7 +215,7 @@ class GeminiService implements AIInterface {
       name: aiData['name'],
       ingredients: ingredients,
       tools: tools,
-      category: aiData['category'] ?? 'Dinner',
+      categoryKey: aiData['category'] ?? 'Dinner',
       createdDate: DateTime.now(),
       steps: (aiData['steps'] as List)
           .map(

@@ -92,5 +92,7 @@
     "recipeAdded": "Công thức đã được thêm!",
     "recipeDeleted": "Công thức đã được xóa!",
     "error": "Lỗi",
-    "intruction": "Hướng dẫn"
+    "instruction": "Hướng dẫn",
+    "generate_from_url_description": "Trích xuất công thức từ URL",
+    "generate_from_recipe_description": "Tạo công thức từ nguyên liệu có sẵn"
 }

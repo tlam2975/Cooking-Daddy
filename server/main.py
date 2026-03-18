@@ -1,5 +1,5 @@
-# import google.generativeai as genai
-import google.genai
+import google.generativeai as genai
+# import google.genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
@@ -7,17 +7,12 @@ import json
 from dotenv import load_dotenv
 from colorama import Fore, Style
 import requests
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled
 import re
 import logging
 from fastapi import HTTPException
 from bs4 import BeautifulSoup
-from youtube_transcript_api._errors import (
-    TranscriptsDisabled,
-    NoTranscriptFound,
-    VideoUnavailable,
-    CouldNotRetrieveTranscript,
-)
+from youtube_transcript_api._errors import VideoUnavailable
 
 # Load environment variables
 load_dotenv()
@@ -81,7 +76,6 @@ def try_all_keys(prompt):
     raise Exception(f'All API keys exhausted. Last error: {last_error}')
 #check https://aistudio.google.com/rate-limit for more models
 # But gemini-2.5-flash is the only one that works ...
-# Configure weather
 
 
 
@@ -93,6 +87,68 @@ CORS(app)
 MAX_DAILY_REQUESTS = 50
 request_count = 0
 order = 0
+
+def get_youtube_transcript(url: str) -> str:
+    """
+    Fetches the full transcript of a YouTube video as plain text.
+
+    Compatible with both legacy (<0.6.0) and newer (>=0.6.0) versions
+    of youtube-transcript-api.
+
+    Args:
+        url: A YouTube video URL (supports standard, shortened, and embed formats).
+
+    Returns:
+        The full transcript as a single plain-text string.
+
+    Raises:
+        ValueError: If the URL is invalid or no video ID can be extracted.
+        RuntimeError: If no transcript is available for the video.
+    """
+    video_id = _extract_video_id(url)
+    if not video_id:
+        raise ValueError(f"Could not extract a valid YouTube video ID from URL: {url}")
+
+    try:
+        # Works for youtube-transcript-api >= 0.6.0
+        ytt = YouTubeTranscriptApi()
+        transcript_segments = ytt.fetch(video_id)
+    except AttributeError:
+        # Fallback for older versions
+        transcript_segments = YouTubeTranscriptApi.get_transcript(video_id)
+    except TranscriptsDisabled:
+        raise RuntimeError(f"Transcripts are disabled for video: {video_id}")
+    except NoTranscriptFound:
+        raise RuntimeError(f"No transcript found for video: {video_id}")
+    except VideoUnavailable:
+        raise RuntimeError(f"Video is unavailable: {video_id}")
+
+    full_text = " ".join(
+        segment.text if hasattr(segment, "text") else segment["text"]
+        for segment in transcript_segments
+    )
+    return full_text
+
+
+def _extract_video_id(url: str) -> str | None:
+    """
+    Extracts the YouTube video ID from various URL formats:
+      - https://www.youtube.com/watch?v=VIDEO_ID
+      - https://youtu.be/VIDEO_ID
+      - https://www.youtube.com/embed/VIDEO_ID
+      - https://www.youtube.com/shorts/VIDEO_ID
+    """
+    patterns = [
+        r"(?:v=)([0-9A-Za-z_-]{11})",       # standard ?v=
+        r"(?:youtu\.be/)([0-9A-Za-z_-]{11})", # shortened
+        r"(?:embed/)([0-9A-Za-z_-]{11})",      # embed
+        r"(?:shorts/)([0-9A-Za-z_-]{11})",     # shorts
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
 
 
 # Build recipe from ingredients
@@ -119,127 +175,62 @@ The response should be in JSON format."""
     
     return prompt
 
+def build_prompt_from_URL(transcript):
+    try:
+        prompt = f"""
+            You are a strict JSON extractor. Do not summarize or paraphrase.
 
-#Extract recipe from URL
-def build_url_prompt(url: str) -> str:
-    """
-    Build prompt for URL-based recipe generation
-    Handles both YouTube videos and regular webpages
-    """
-    
-    # ========== YOUTUBE HANDLING ==========
-    if 'youtube.com' in url or 'youtu.be' in url:
-        try:
-            from youtube_service import YouTubeService
-            
-            youtube_service = YouTubeService()
-            
-            # Extract video ID
-            video_id = youtube_service.extract_video_id(url)
-            print(f'🎥 YouTube video detected: {video_id}')
-            
-            # Get metadata
-            metadata = youtube_service.get_video_metadata(url)
-            print(f'📹 Video title: {metadata["title"]}')
-            
-            # Get transcript
-            transcript_segments = youtube_service.get_transcript_detailed(
-                video_id,
-                languages=["en", "vi", "en-US", "en-GB"]
-            )
-            
-            # Combine transcript text
-            transcript_text = ' '.join(segment['text'] for segment in transcript_segments)
-            
-            print(f'✅ Got transcript: {len(transcript_text)} characters')
-            
-            # Build YouTube-specific prompt
-            prompt = f"""Extract a recipe from this YouTube video transcript:
+Task:
+Extract a recipe from the transcript.
 
-Video Title: {metadata['title']}
-Uploader: {metadata.get('uploader', 'Unknown')}
+Rules:
+- Only use information explicitly present in the transcript.
+- Do not infer or add missing data.
+- Use metric units if provided; do not convert if absent.
+- If no recipe is present, return: {"error": 418}
 
-Transcript:
-{transcript_text}
+Output (valid JSON only):
 
-Based on this transcript, extract the cooking recipe with exact instructions, ingredients, and timing mentioned in the video.
-"""
-            
-        except Exception as e:
-            print(f'❌ YouTube error: {e}')
-            raise Exception(f"Could not get YouTube transcript: {str(e)}")
-    
-    # ========== WEBPAGE HANDLING ==========
-    else:
-        try:
-            import requests
-            from bs4 import BeautifulSoup
-            
-            print(f'{Fore.LIGHTBLUE_EX}🌐 Fetching webpage: {url}')
-            
-            response = requests.get(url, timeout=10)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Remove scripts and styles
-            for script in soup(["script", "style"]):
-                script.decompose()
-            
-            # Get text
-            text = soup.get_text()
-            lines = (line.strip() for line in text.splitlines())
-            text = '\n'.join(line for line in lines if line)
-            
-            # Get title
-            title = soup.find('title')
-            title_text = title.get_text() if title else 'Unknown'
-            
-            # Limit content
-            content = text[:5000]
-            
-            print(f'✅ Got webpage: {len(content)} characters')
-            
-            # Build webpage-specific prompt
-            prompt = f"""Extract a recipe from this webpage:
-
-Title: {title_text}
-
-Content:
-{content}
-
-Based on this webpage content, extract the cooking recipe.
-"""
-            
-        except Exception as e:
-            print(f'❌ Webpage error: {e}')
-            raise Exception(f"Could not fetch webpage: {str(e)}")
-    
-    # ========== COMMON FORMAT REQUIREMENTS ==========
-    prompt += """
-
-Return ONLY a JSON object with this exact structure:
 {
-  "name": "Recipe name",
-  "category": "Breakfast/Lunch/Dinner/Dessert/Drinks/Lazy meals",
-  "ingredients": "ingredient1, ingredient2, ...",
-  "tools": "tool1, tool2, ...",
+  "name": string,
+  "ingredients": [
+    {"name": string, "amount": number, "unit": string}
+  ],
+  "tools": [string],
   "steps": [
     {
-      "instruction": "Step description",
-      "heat": "High/Medium/Low/Off",
-      "time": 200,
-      "seasoning": "salt, pepper",
-      "notes": "Tips",
-      "whatToLookFor": "Visual cues"
+      "instruction": string,
+      "heat": string,
+      "time": number,
+      "seasoning": string,
+      "notes": string,
+      "whatToLookFor": string
     }
   ]
 }
 
-All measurements in metric (grams, liters, cm).
-Timer in seconds as int.
-Don't add too many extra ingredients beyond what's mentioned.
-"""
+Rules for fields:
+- Always include top-level fields.
+- In steps, include "instruction" always.
+- Other step fields only if explicitly mentioned.
+- No nulls, no empty strings, no extra fields.
+
+Transcript:
+{transcript}
+                """
+        
+        return prompt
     
-    return prompt
+    except Exception as e:
+        error_msg = str(e)
+        if '418' in error_msg:
+            raise HTTPException(status_code=418, detail="Transcript does not contain a recipe or cooking instructions")
+        else:            
+            raise HTTPException(status_code=500, detail="Error building prompt from URL")
+    finally:
+        raise HTTPException(status_code=422, detail=f"{error_msg}")
+    
+
 
 def build_smart_prompt(ingredients, tools, dish, session_length, difficulty, 
                        weather, meal_time, current_hour):
@@ -292,7 +283,7 @@ Requirements:
         
         # Weather condition
         if weather.get('is_raining'):
-            prompt += "- RAINING: Perfect for hot soups, broths, comfort food\n"
+            prompt += "- RAINING: Perfect for hot soups, broths, comfort foods\n"
         
         # Cultural context
         prompt += f"- Consider {city}'s local cuisine preferences\n"
@@ -467,7 +458,8 @@ def generate_from_url():
     
     try:
         # Build prompt
-        prompt = build_url_prompt(url)
+        prompt = get_youtube_transcript(url)
+        prompt = build_prompt_from_URL(prompt)
         print(f'\n📤 PROMPT SENT:\n{prompt}\n')
         
         # Call Gemini
@@ -586,12 +578,15 @@ def smart_generate():
     now = datetime.now()
     current_hour = now.hour
     
-    if 6 <= current_hour < 11:
+    if 5 <= current_hour < 9:
         meal_time = 'breakfast'
-    elif 11 <= current_hour < 15:
+    elif 11 <= current_hour < 14:
         meal_time = 'lunch'
-    else:
+    elif 17 <= current_hour < 21:
         meal_time = 'dinner'
+    else:
+        meal_time = 'snacks'
+
     
     # Build smart prompt
     prompt = build_smart_prompt(
@@ -633,6 +628,7 @@ def smart_generate():
 # Run server
 if __name__ == '__main__':
     if not API_KEYS:
+    
         print('❌ ERROR: GEMINI_API_KEY not found in .env')
         exit(1)
     

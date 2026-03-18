@@ -1,8 +1,8 @@
-import 'package:cooking_daddy/data/repositories/recipe_repository.dart';
+// import 'package:cooking_daddy/data/repositories/recipe_repository.dart';
 import 'package:flutter/material.dart';
 import 'data/datasources/isar_datasource.dart';
 import 'data/models/recipe.dart';
-import 'data/models/category.dart';
+// import 'data/models/category.dart';
 import 'screens/home.dart';
 import 'screens/recipe_editor.dart';
 import 'screens/cooking_session.dart';
@@ -12,6 +12,7 @@ import 'screens/profile.dart';
 import 'screens/ai_features.dart';
 import 'services/notification.dart';
 import 'package:easy_localization/easy_localization.dart';
+// import 'utils/migrate_categories.dart';
 
 void main() async {
   print('MAIN: Starting app...');
@@ -19,8 +20,16 @@ void main() async {
 
   // print('MAIN: Initializing Isar...');
   await IsarDatasource.initialize();
+
+  // RUN MIGRATION ONCE
+  // final isar = IsarDatasource.isar;
+  // await migrateCategoryKeys(isar);
+
   print('MAIN: Isar initialized!');
   await EasyLocalization.ensureInitialized();
+
+  print('MAIN: Migrating categories');
+  await IsarDatasource.migrateCategoryKeys();
 
   print('MAIN: Initializing notifications...');
   await NotificationService.initialize();

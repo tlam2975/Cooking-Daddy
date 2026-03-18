@@ -60,5 +60,7 @@
     <key>NSAllowsArbitraryLoads</key>
     <true/>
 </dict>
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>We use your location to suggest weather-appropriate recipes</string>
 </dict>
 </plist>
