@@ -15,6 +15,7 @@ class AIFeaturesScreen extends StatefulWidget {
 }
 
 class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
+  final AIInterface url = GeminiService();
   final AIInterface _aiService = GeminiService();
   final TextEditingController _urlController = TextEditingController();
 
@@ -42,6 +43,9 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
       setState(() {
         _isHealthy = healthy;
         _isChecking = false;
+        print(
+          'Checking AI server health: ${healthy ? "Healthy" : "Unhealthy"}\nBase URL: ${url}',
+        );
       });
     }
   }
@@ -54,18 +58,37 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
       builder: (context) => const GenerateFromIngredientsModal(),
     );
 
-    if (result != null && result.success && result.recipe != null) {
-      // if (mounted) {
-      //   ScaffoldMessenger.of(context).showSnackBar(
-      //     SnackBar(
-      //       content: Text('✅ Generated: ${result.recipe!.name}'),
-      //       backgroundColor: Colors.green,
-      //     ),
-      //   );
+    if (result != null) {
+      if (result.success && result.recipe != null) {
+        print('🟡 RAW result: $result');
+        print('🟡 success: ${result.success}');
+        print('🟡 recipe: ${result.recipe}');
 
-      //   // Navigate to recipe editor with generated recipe
-      // }
-      Navigator.pushNamed(context, '/recipeEditor', arguments: result.recipe);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ Generated: ${result.recipe!.name}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        // Show error if generation failed
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ ${result.error ?? 'Failed to generate recipe'}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+
+      // Pop AIFeatures screen and return result to recipe_editor
+      if (mounted) {
+        Navigator.pop(context, result);
+        print('Popped back to /recipeEditor! with $result');
+      }
     }
   }
 
@@ -278,6 +301,9 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
   }
 
   Future<void> _showUrlDialog() async {
+    // The "Generate from URL" feature should generate from the user input URL
+    // This should probably be implemented in a modal similar to ingredients
+    // For now, show a modal or dialog to get URL input
     final result = await showModalBottomSheet<AIGenerationResult>(
       context: context,
       isScrollControlled: true,
@@ -285,47 +311,34 @@ class _AIFeaturesScreenState extends State<AIFeaturesScreen> {
       builder: (context) => const GenerateFromIngredientsModal(),
     );
 
-    if (result != null && result.success && result.recipe != null) {
-      Navigator.pushNamed(
-        context,
-        '/recipeEditor',
-        arguments: result.recipe, // ← Passes recipe to editor
-      );
-    }
-
-    if (result == true && _urlController.text.isNotEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('generatingRecipe'.tr())));
-
-        final aiResult = await _aiService.generateFromUrl(_urlController.text);
+    if (result != null) {
+      if (result.success && result.recipe != null) {
+        print('Result success: ${result.success}');
+        print('Recipe: ${result.recipe}');
 
         if (mounted) {
-          if (aiResult.success && aiResult.recipe != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  '✅ ${'recipeGenerated'.tr()}: ${aiResult.recipe!.name}',
-                ),
-                backgroundColor: Colors.green,
-              ),
-            );
-
-            Navigator.pushNamed(
-              context,
-              '/recipeEditor',
-              arguments: aiResult.recipe,
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('❌ ${aiResult.error}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ Generated: ${result.recipe!.name}'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
+      } else {
+        // Show error if generation failed
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ ${result.error ?? 'Failed to generate recipe'}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+
+      // Pop AIFeatures screen and return result to recipe_editor
+      if (mounted) {
+        Navigator.pop(context, result);
       }
     }
   }

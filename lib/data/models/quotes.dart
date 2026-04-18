@@ -37,12 +37,12 @@ final List<String> cookingQuotesVi = [
   'đàn ông vào bếp, oke?',
   'chà chà',
   'fuiyoooooooo',
-  'XOXO'
-      "làm ơn đừng làm hỏng nó",
+  'XOXO',
+  "làm ơn đừng làm hỏng nó",
   'Itadakimasu',
   "haiyaaa đừng làm hỏng nó",
   'u are really cooking, arent ya?',
-  'có được việc không đấy?',
+  'có làm được không vậy?',
   'quay lại làm việc đi đầu bếp',
   'WHERE IS THE LAMB SAUCE?!',
   'idiot sandwich!',
@@ -59,4 +59,6 @@ final List<String> cookingQuotesVi = [
   'gia vị đâu rồi?!',
   'dọn sạch chỗ làm đi!',
   'chúng ta là người châu Á, chúng ta không đo lường',
+  'Cho muối chưa vầy?',
+  'phải chịuuuuuuu',
 ];

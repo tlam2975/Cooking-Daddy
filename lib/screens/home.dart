@@ -44,24 +44,14 @@ class _HomePageState extends State<HomePage> {
   List<Recipe> filteredRecipes = [];
   String? selectedCategoryFilter;
 
-  // List of categories
-  // final List<String> categories = [
-  //   'Breakfast',
-  //   'Lunch',
-  //   'Dinner',
-  //   'Lazy meals',
-  //   'Dessert',
-  //   'Drinks',
-  // ];
-
-  // List<String> get categories {
-  //   return CategoryData.getDisplayNames(context.locale.languageCode);
-  // }
+  List<String> get categories {
+    return CategoryData.getDisplayNames(context.locale.languageCode);
+  }
 
   Future<bool> _isSelectedCategory(String categoryDisplay) async {
     if (selectedCategoryFilter == null) return false;
 
-    final key = await CategoryData.getKeyFromDisplay(
+    final key = CategoryData.getKeyFromDisplay(
       categoryDisplay,
       context.locale.languageCode,
     );
@@ -70,7 +60,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<List<String>> _loadCategories() async {
-    return await CategoryData.getDisplayNames(context.locale.languageCode);
+    return CategoryData.getDisplayNames(context.locale.languageCode);
   }
 
   void _showDeleteConfirmation(Recipe recipe) {
@@ -148,7 +138,7 @@ class _HomePageState extends State<HomePage> {
       });
     } else {
       // Convert display name to key
-      final key = await CategoryData.getKeyFromDisplay(
+      final key = CategoryData.getKeyFromDisplay(
         categoryDisplay,
         context.locale.languageCode,
       );

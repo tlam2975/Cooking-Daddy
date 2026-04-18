@@ -8,7 +8,6 @@ import '../services/ai_interface.dart';
 import '../services/gemini_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../data/models/list_categories.dart';
-// import '../data/models/category.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
   final Recipe? recipe;
@@ -26,17 +25,16 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   final TextEditingController _toolsController = TextEditingController();
   final AIInterface _aiService = GeminiService();
   bool _isGenerating = false;
-  // List of categories
 
   late String randomQuote;
 
   final RecipeRepository _repository = RecipeRepository();
 
   List<StepData> steps = [StepData()]; // Start with one step
-  String? selectedCategory;
+  String? selectedCategoryKey;
 
   Future<List<String>> _loadCategories() async {
-    return await CategoryData.getDisplayNames(context.locale.languageCode);
+    return CategoryData.getDisplayNames(context.locale.languageCode);
   }
 
   @override
@@ -104,19 +102,20 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   void _fillFormWithRecipe(Recipe recipe) {
     setState(() {
       _nameController.text = recipe.name;
+      _urlController.text = recipe.url ?? '';
       _ingredientsController.text = recipe.ingredients;
       _toolsController.text = recipe.tools;
-      selectedCategory = recipe.categoryKey;
 
-      // Clear and fill steps
-      steps.clear();
-      for (var step in recipe.steps) {
+      // Store KEY directly - NO context.locale here!
+      selectedCategoryKey = recipe.categoryKey; // ← Fixed!
+
+      // Steps
+      steps = recipe.steps.map((step) {
         final stepData = StepData();
         stepData.instructionController.text = step.instruction;
         stepData.heatController.text = step.heat ?? '';
         stepData.seasoningsController.text = step.seasonings ?? '';
 
-        // Convert timer (seconds) to minutes and seconds
         if (step.timer != null) {
           stepData.timerMinController.text = (step.timer! ~/ 60).toString();
           stepData.timerSecController.text = (step.timer! % 60).toString();
@@ -124,13 +123,15 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
 
         stepData.notesController.text = step.notes ?? '';
         stepData.lookForController.text = step.whatToLookFor;
-        steps.add(stepData);
-      }
+        return stepData;
+      }).toList();
 
       if (steps.isEmpty) {
         steps = [StepData()];
       }
     });
+
+    // No more conversion here - it happens in build() where context is safe
   }
 
   @override
@@ -150,7 +151,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       _urlController.text = widget.recipe!.url ?? '';
       _ingredientsController.text = widget.recipe!.ingredients;
       _toolsController.text = widget.recipe!.tools;
-      selectedCategory = widget.recipe!.categoryKey;
+      selectedCategoryKey = widget.recipe!.categoryKey;
 
       // Pre-fill steps
       steps = widget.recipe!.steps.map((step) {
@@ -282,14 +283,38 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                       child: ElevatedButton(
                         onPressed: _isGenerating
                             ? null
-                            : () {
+                            : () async {
                                 // Check if URL field has content
                                 if (_urlController.text.trim().isNotEmpty) {
                                   // Has URL → Generate from URL
                                   _generateFromURL();
                                 } else {
                                   // No URL → Open AI Features
-                                  Navigator.pushNamed(context, '/aiFeatures');
+                                  // AWAIT the result from AI Features
+                                  final result = await Navigator.pushNamed(
+                                    context,
+                                    '/aiFeatures',
+                                  );
+
+                                  // Handle the result
+                                  if (result != null &&
+                                      result is AIGenerationResult) {
+                                    if (result.success &&
+                                        result.recipe != null) {
+                                      _fillFormWithRecipe(result.recipe!);
+
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            '✅ Recipe generated: ${result.recipe!.name}',
+                                          ),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  }
                                 }
                               },
                         style: ElevatedButton.styleFrom(
@@ -390,7 +415,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                     style: const TextStyle(fontSize: 16),
                                   ),
                                 ),
-                                // Category Dropdown
+
                                 // Category Dropdown
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -408,51 +433,55 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: FutureBuilder<List<String>>(
-                                    future: _loadCategories(),
+                                  child: // In your build method, inside the category dropdown section:
+                                  FutureBuilder<List<String>>(
+                                    future:
+                                        _loadCategories(), // Returns display names ["Breakfast", "Lunch"...]
                                     builder: (context, snapshot) {
                                       if (!snapshot.hasData) {
-                                        return const SizedBox(
-                                          width: 120,
-                                          child: Center(
-                                            child: SizedBox(
-                                              width: 16,
-                                              height: 16,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            ),
-                                          ),
-                                        );
+                                        return const CircularProgressIndicator();
                                       }
 
-                                      final categories = snapshot.data!;
+                                      final categoryDisplayNames =
+                                          snapshot.data!;
+
+                                      // Convert stored KEY to DISPLAY NAME for dropdown
+                                      String? selectedDisplay;
+                                      if (selectedCategoryKey != null) {
+                                        selectedDisplay =
+                                            CategoryData.getDisplayName(
+                                              selectedCategoryKey!,
+                                              context
+                                                  .locale
+                                                  .languageCode, // ← SAFE here in build()
+                                            );
+                                      }
 
                                       return DropdownButton<String>(
-                                        value: selectedCategory,
-                                        hint: Text(
-                                          'category'.tr(),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        underline: const SizedBox(),
-                                        icon: const Icon(Icons.arrow_drop_down),
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 16,
-                                          fontFamily: currentFont,
-                                        ),
-                                        items: categories.map((String value) {
-                                          return DropdownMenuItem<String>(
-                                            value: value,
-                                            child: Text(value),
+                                        value: selectedDisplay,
+                                        hint: Text('selectCategory'.tr()),
+                                        items: categoryDisplayNames.map((
+                                          displayName,
+                                        ) {
+                                          return DropdownMenuItem(
+                                            value: displayName,
+                                            child: Text(displayName),
                                           );
                                         }).toList(),
-                                        onChanged: (String? newValue) {
-                                          setState(() {
-                                            selectedCategory = newValue;
-                                          });
+                                        onChanged: (String? newDisplayName) async {
+                                          if (newDisplayName != null) {
+                                            // Convert display name → key
+                                            final key =
+                                                await CategoryData.getKeyFromDisplay(
+                                                  newDisplayName,
+                                                  context.locale.languageCode,
+                                                );
+
+                                            setState(() {
+                                              selectedCategoryKey =
+                                                  key; // ← Store KEY
+                                            });
+                                          }
                                         },
                                       );
                                     },
@@ -480,8 +509,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                       return;
                                     }
 
-                                    if (selectedCategory == null ||
-                                        selectedCategory == 'Category') {
+                                    if (selectedCategoryKey == null ||
+                                        selectedCategoryKey == 'Category') {
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
@@ -503,7 +532,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                           : _urlController.text,
                                       ingredients: _ingredientsController.text,
                                       tools: _toolsController.text,
-                                      categoryKey: selectedCategory!,
+                                      categoryKey: selectedCategoryKey!,
                                       createdDate:
                                           widget.recipe?.createdDate ??
                                           DateTime.now(),

@@ -4,8 +4,9 @@ import 'dart:math';
 import 'dart:async';
 import '../data/models/recipe.dart';
 import '../data/models/quotes.dart';
-// import 'package:flutter/services.dart';
+import 'package:flutter/services.dart';
 import '../services/timer.dart';
+import 'package:proximity_sensor/proximity_sensor.dart';
 
 class CookingSessionScreen extends StatefulWidget {
   final Recipe recipe;
@@ -21,25 +22,64 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
   int currentStepIndex = 0;
   final TimerService _timerService = TimerService();
 
-  // Timer variables
-  Timer? timer;
-  int remainingSeconds = 0;
-  bool timerRunning = false;
+  // Proximity sensor variables
+  StreamSubscription<int>? _proximitySubscription;
+  Timer? _holdTimer;
+  Timer? _delayTimer;
+  double _holdProgress = 0.0;
+  bool _proximityEnabled = false;
+  bool _showProximityHint = false;
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize random quote
     randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
+
+    // Initialize proximity sensor
+    _initProximitySensor();
+
+    // Listen to timer updates
+    _timerService.addListener(_onTimerUpdate);
+
+    // Check if current step has timer
+    final currentStep = widget.recipe.steps[currentStepIndex];
+    if (currentStep.timer == null || currentStep.timer! <= 0) {
+      // No timer - start 10-second delay
+      _startDelayedProximity();
+    }
   }
 
   @override
   void dispose() {
-    _timerService.dispose();
+    _timerService.removeListener(_onTimerUpdate);
+    _proximitySubscription?.cancel();
+    _holdTimer?.cancel();
+    _delayTimer?.cancel();
     super.dispose();
+  }
+
+  // ==================== TIMER METHODS ====================
+
+  void _onTimerUpdate() {
+    // Check if timer just finished (was running, now stopped at 0)
+    if (!_timerService.isRunning && _timerService.remainingSeconds == 0) {
+      // Timer finished! Activate proximity sensor
+      if (!_proximityEnabled) {
+        print('⏰ Timer finished - activating proximity sensor');
+        _activateProximity();
+      }
+    }
   }
 
   void startTimer(int totalSeconds) {
     print('Starting timer for $totalSeconds seconds');
+
+    // Deactivate proximity while timer is running
+    _deactivateProximity();
+    _delayTimer?.cancel();
+
     _timerService.startTimer(
       seconds: totalSeconds,
       recipeName: widget.recipe.name,
@@ -48,71 +88,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
     print('Timer service is running: ${_timerService.isRunning}');
   }
 
-  //===============V2 of _onTimerComplete - Added sound alarm=============================
-
-  // Future<void> _onTimerComplete() async {
-  //   try {
-  //     // Check if app is in foreground or background
-  //     if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
-  //       // APP IS OPEN - play alarm + STRONG vibration
-
-  //       // Play alarm sound
-  //       await _audioPlayer.play(AssetSource('sounds/alarm.mp3'));
-
-  //       // STRONG vibration pattern - like phone calls
-  //       // Vibrate continuously for 3 seconds
-  //       for (int i = 0; i < 6; i++) {
-  //         await HapticFeedback.heavyImpact();
-  //         await Future.delayed(const Duration(milliseconds: 100));
-  //         await HapticFeedback.heavyImpact();
-  //         await Future.delayed(const Duration(milliseconds: 400));
-  //       }
-
-  //       // Visual feedback
-  //       if (mounted) {
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           SnackBar(
-  //             content: Text('⏰ Timer done! Check Step ${currentStepIndex + 1}'),
-  //             backgroundColor: Colors.green,
-  //             duration: const Duration(seconds: 5),
-  //           ),
-  //         );
-  //       }
-  //     } else {
-  //       // APP IS IN BACKGROUND - send notification
-  //       await NotificationService.showTimerCompleteNotification(
-  //         title: 'Timer Done! ⏰',
-  //         body:
-  //             'Step ${currentStepIndex + 1} for ${widget.recipe.name} is ready',
-  //       );
-  //     }
-  //   } catch (e) {
-  //     print('Error in _onTimerComplete: $e');
-  //   }
-  // }
-
-  //==========================================
-
   void stopTimer() {
     _timerService.stopTimer();
-  }
-
-  void nextStep() {
-    stopTimer();
-    setState(() {
-      if (currentStepIndex < widget.recipe.steps.length - 1) {
-        currentStepIndex++;
-        // Auto-start timer if next step has one
-        final nextStep = widget.recipe.steps[currentStepIndex];
-        if (nextStep.timer != null && nextStep.timer! > 0) {
-          startTimer(nextStep.timer!);
-        }
-      } else {
-        // Move to completion screen
-        currentStepIndex =
-            widget.recipe.steps.length; // This triggers isLastStep
-      }
-    });
   }
 
   String formatTime(int seconds) {
@@ -120,6 +97,105 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
     final secs = seconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
+
+  // ==================== PROXIMITY SENSOR ====================
+
+  void _initProximitySensor() {
+    _proximitySubscription = ProximitySensor.events.listen((int event) {
+      // event: 0 = far, 1-100 = near (distance varies by device)
+      if (_proximityEnabled && event > 0) {
+        // Hand is near
+        _onProximityNear();
+      } else {
+        _onProximityFar();
+      }
+    });
+  }
+
+  void _onProximityNear() {
+    if (_holdTimer != null) return; // Already counting
+
+    setState(() => _showProximityHint = true);
+
+    // Start 2-second countdown with visual feedback
+    _holdTimer = Timer.periodic(Duration(milliseconds: 50), (timer) {
+      setState(() {
+        _holdProgress += 0.025; // 50ms / 2000ms = 0.025
+
+        if (_holdProgress >= 1.0) {
+          // Hold completed - advance step!
+          HapticFeedback.mediumImpact();
+          nextStep();
+          _resetProximity();
+        }
+      });
+    });
+  }
+
+  void _onProximityFar() {
+    _resetProximity();
+  }
+
+  void _resetProximity() {
+    _holdTimer?.cancel();
+    _holdTimer = null;
+    setState(() {
+      _holdProgress = 0.0;
+      _showProximityHint = false;
+    });
+  }
+
+  void _activateProximity() {
+    setState(() {
+      _proximityEnabled = true;
+      _showProximityHint = true;
+    });
+  }
+
+  void _deactivateProximity() {
+    _resetProximity();
+    setState(() => _proximityEnabled = false);
+  }
+
+  void _startDelayedProximity() {
+    // For non-timer steps: activate after 10 seconds
+    _delayTimer?.cancel();
+    _delayTimer = Timer(Duration(seconds: 10), () {
+      if (mounted && !_proximityEnabled) {
+        _activateProximity();
+      }
+    });
+  }
+
+  // ==================== NAVIGATION ====================
+
+  void nextStep() {
+    stopTimer();
+
+    // Deactivate proximity
+    _deactivateProximity();
+    _delayTimer?.cancel();
+
+    setState(() {
+      if (currentStepIndex < widget.recipe.steps.length - 1) {
+        currentStepIndex++;
+
+        // Auto-start timer if next step has one
+        final nextStep = widget.recipe.steps[currentStepIndex];
+        if (nextStep.timer != null && nextStep.timer! > 0) {
+          startTimer(nextStep.timer!);
+        } else {
+          // No timer - start 10-second delay
+          _startDelayedProximity();
+        }
+      } else {
+        // Move to completion screen
+        currentStepIndex = widget.recipe.steps.length;
+      }
+    });
+  }
+
+  // ==================== BUILD ====================
 
   @override
   Widget build(BuildContext context) {
@@ -190,11 +266,85 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                     ],
                   ),
                 ),
-                // Content
+                // Content with proximity overlay
                 Expanded(
-                  child: isLastStep
-                      ? _buildCompletionScreen()
-                      : _buildStepScreen(currentStep!),
+                  child: Stack(
+                    children: [
+                      // Main content
+                      isLastStep
+                          ? _buildCompletionScreen()
+                          : _buildStepScreen(currentStep!),
+
+                      // Proximity hint overlay
+                      if (_proximityEnabled && _showProximityHint)
+                        Positioned(
+                          top: 20,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.8),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.pan_tool,
+                                    color: Colors.white,
+                                    size: 32,
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    '👋 Wave hand to continue',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  // Progress bar
+                                  Container(
+                                    width: 200,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.3),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: FractionallySizedBox(
+                                      alignment: Alignment.centerLeft,
+                                      widthFactor: _holdProgress,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.green,
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    '${(2 - _holdProgress * 2).toStringAsFixed(1)}s',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 // Footer
                 Container(
@@ -211,6 +361,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
       },
     );
   }
+
+  // ==================== UI COMPONENTS ====================
 
   Widget _buildStepScreen(Step step) {
     final hasTimer = step.timer != null && step.timer! > 0;
@@ -487,7 +639,6 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                 color: Color.fromARGB(255, 0, 0, 0),
               ),
               textAlign: TextAlign.center,
-              // ,
             ),
             Text(
               'you_have_made'.tr(),

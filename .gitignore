@@ -46,5 +46,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-#Environment files
+
+#Server files
 /server/.env
+/server/.venv
+/server/__pycache__/

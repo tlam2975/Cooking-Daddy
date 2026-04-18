@@ -6,8 +6,8 @@ import 'dart:async';
 import 'dart:io';
 
 class GeminiService implements AIInterface {
+  final String baseUrl = 'http://localhost:2975';
   //make sure its the damn right IP address alright?
-  final String baseUrl = 'http://192.168.0.235:2975';
 
   @override
   Future<AIGenerationResult> generateFromIngredients({
@@ -18,6 +18,7 @@ class GeminiService implements AIInterface {
     String difficulty = 'normal',
   }) async {
     try {
+      print('Calling: $baseUrl/api/generate-from-ingredients');
       final body = {
         'ingredients': ingredients,
         'sessionLength': sessionLength,
@@ -138,9 +139,9 @@ class GeminiService implements AIInterface {
       final response = await http
           .get(Uri.parse('$baseUrl/health'))
           .timeout(const Duration(seconds: 5));
-
       return response.statusCode == 200;
     } catch (e) {
+      print('🔴 Health check failed: $e');
       return false;
     }
   }
@@ -165,35 +166,6 @@ class GeminiService implements AIInterface {
     }
   }
 
-  // Recipe _convertToRecipe(Map<String, dynamic> aiData) {
-  //   final aiSteps = aiData['steps'] as List;
-  //   String ingredients;
-  //   final steps = aiSteps.asMap().entries.map((entry) {
-  //     final index = entry.key;
-  //     final step = entry.value;
-  //     final timeInSeconds = step['time'] as int? ?? 0;
-
-  //     return Step(
-  //       instruction: step['instruction'] ?? '',
-  //       heat: step['heat'],
-  //       index: index,
-  //       seasonings: step['seasoning'],
-  //       timer: timeInSeconds,
-  //       notes: step['notes'],
-  //       whatToLookFor: step['whatToLookFor'] ?? '',
-  //     );
-  //   }).toList();
-
-  //   return Recipe(
-  //     name: aiData['name'] ?? 'Untitled Recipe',
-  //     url: null,
-  //     category: aiData['category'] ?? 'Dinner',
-  //     ingredients: aiData['ingredients'] ?? '',
-  //     tools: aiData['tools'] ?? '',
-  //     createdDate: DateTime.now(),
-  //     steps: steps,
-  //   );
-  // }
   Recipe _convertToRecipe(Map<String, dynamic> aiData) {
     // Convert ingredients (could be String or List)
     String ingredients;
