@@ -5,7 +5,7 @@ class SmartGenerateRequest:
 
         self.ingredients = str(data.get('ingredients', '')).strip()
         self.tools = str(data.get('tools', '')).strip() or None
-        self.dish = str(data.get('dish', '')).strip() or None
+        self.dish = str(data.get('dish', '')).strip() or 'Main'
         self.session_length = data.get('sessionLength', 'short')
         self.difficulty = data.get('difficulty', 'normal')
         self.location = data.get('location')

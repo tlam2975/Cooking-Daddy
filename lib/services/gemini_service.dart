@@ -7,7 +7,6 @@ import 'dart:io';
 
 class GeminiService implements AIInterface {
   final String baseUrl = 'http://localhost:2975';
-  //make sure its the damn right IP address alright?
 
   @override
   Future<AIGenerationResult> generateFromIngredients({
@@ -16,35 +15,65 @@ class GeminiService implements AIInterface {
     String? dish,
     String sessionLength = 'normal',
     String difficulty = 'normal',
+    String location = 'Hanoi',
   }) async {
     try {
-      print('Calling: $baseUrl/api/generate-from-ingredients');
+      print('🔵 ===== GEMINI SERVICE =====');
+      print('🔵 Calling: $baseUrl/api/generate-from-ingredients');
+      print('🔵 Ingredients: "$ingredients"');
+      print('🔵 Tools: "$tools"');
+      print('🔵 Dish: "$dish"');
+      print('🔵 Session: $sessionLength');
+      print('🔵 Difficulty: $difficulty');
+
+      // Build request body
       final body = {
         'ingredients': ingredients,
         'sessionLength': sessionLength,
         'difficulty': difficulty,
+        'location': location,
       };
 
-      if (tools != null && tools.isNotEmpty) body['tools'] = tools;
-      if (dish != null && dish.isNotEmpty) body['dish'] = dish;
+      // Add optional fields only if provided
+      if (tools != null && tools.isNotEmpty) {
+        body['tools'] = tools;
+      }
+      if (dish != null && dish.isNotEmpty) {
+        body['dish'] = dish;
+      }
+
+      print('🔵 Request body: ${jsonEncode(body)}');
+      print('🔵 ==========================');
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/api/generate-from-ingredients'),
+            Uri.parse('$baseUrl/api/smart-generate'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode(body),
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 60));
 
-      if (response.statusCode == 200) {
+      print('🔵 Response received from server: ${response}');
+      print('🟢 Response status: ${response.statusCode}');
+      print('🟢 Response body: ${response.body}');
+
+      if (response.body.contains('"success": true')) {
         final data = jsonDecode(response.body);
 
-        if (data['success'] == true) {
+        if (data['success'] == true && data['recipe'] != null) {
           final recipe = _convertToRecipe(data['recipe']);
+          print('✅ Recipe converted: ${recipe.name}');
+
           return AIGenerationResult(
             success: true,
             recipe: recipe,
             remainingQuota: data['remaining_quota'],
+          );
+        } else {
+          print('❌ Server returned success=false or no recipe');
+          return AIGenerationResult(
+            success: false,
+            error: data['error'] ?? 'Unknown error',
           );
         }
       } else if (response.statusCode == 429) {
@@ -52,27 +81,27 @@ class GeminiService implements AIInterface {
           success: false,
           error: 'Daily quota exceeded',
         );
+      } else {
+        print('❌ Error status: ${response.statusCode}');
+        final data = jsonDecode(response.body);
+        return AIGenerationResult(
+          success: false,
+          error: data['error'] ?? 'Generation failed',
+        );
       }
-
-      final data = jsonDecode(response.body);
+    } on TimeoutException catch (e) {
+      print('🔴 TIMEOUT: $e');
+      return AIGenerationResult(success: false, error: 'Request timed out');
+    } on SocketException catch (e) {
+      print('🔴 SOCKET: $e');
       return AIGenerationResult(
         success: false,
-        error: data['error'] ?? 'Generation failed',
+        error: 'Cannot connect to server',
       );
     } catch (e) {
       print('🔴 EXCEPTION: $e');
       print('🔴 TYPE: ${e.runtimeType}');
-
-      if (e is TimeoutException) {
-        return AIGenerationResult(success: false, error: 'Request timed out');
-      } else if (e is SocketException) {
-        return AIGenerationResult(
-          success: false,
-          error: 'Cannot connect to server. Check network.',
-        );
-      } else {
-        return AIGenerationResult(success: false, error: 'Error: $e');
-      }
+      return AIGenerationResult(success: false, error: 'Error: $e');
     }
   }
 
@@ -96,7 +125,7 @@ class GeminiService implements AIInterface {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        if (data['success'] == true) {
+        if (data['success'] == true && data['recipe'] != null) {
           final recipe = _convertToRecipe(data['recipe']);
           print('✅ Recipe converted: ${recipe.name}');
 
@@ -106,11 +135,10 @@ class GeminiService implements AIInterface {
             remainingQuota: data['remaining_quota'],
           );
         } else {
-          // Success false in response
           print('❌ Server returned success=false');
           return AIGenerationResult(
             success: false,
-            error: data['error'] ?? 'Unknown error from server',
+            error: data['error'] ?? 'Unknown error',
           );
         }
       } else if (response.statusCode == 429) {
@@ -119,14 +147,22 @@ class GeminiService implements AIInterface {
           error: 'Daily quota exceeded',
         );
       } else {
-        // Other error codes
-        print('❌ Error status code: ${response.statusCode}');
+        print('❌ Error status: ${response.statusCode}');
         final data = jsonDecode(response.body);
         return AIGenerationResult(
           success: false,
           error: data['error'] ?? 'Generation failed',
         );
       }
+    } on TimeoutException catch (e) {
+      print('🔴 TIMEOUT: $e');
+      return AIGenerationResult(success: false, error: 'Request timed out');
+    } on SocketException catch (e) {
+      print('🔴 SOCKET: $e');
+      return AIGenerationResult(
+        success: false,
+        error: 'Cannot connect to server',
+      );
     } catch (e) {
       print('🔴 Exception: $e');
       return AIGenerationResult(success: false, error: 'Connection failed: $e');
@@ -167,41 +203,93 @@ class GeminiService implements AIInterface {
   }
 
   Recipe _convertToRecipe(Map<String, dynamic> aiData) {
-    // Convert ingredients (could be String or List)
+    print('🔵 Converting AI data to Recipe...');
+    print('🔵 AI data keys: ${aiData.keys}');
+
+    // Handle ingredients (could be String, List, or Object)
     String ingredients;
-    if (aiData['ingredients'] is List) {
+    if (aiData['ingredients'] is Map) {
+      // Handle {"item": "beef, chicken..."}
+      final ingredientsMap = aiData['ingredients'] as Map;
+      ingredients = ingredientsMap['item'] ?? '';
+    } else if (aiData['ingredients'] is List) {
       ingredients = (aiData['ingredients'] as List).join(', ');
     } else {
-      ingredients = aiData['ingredients'] as String;
+      ingredients = aiData['ingredients'] as String? ?? '';
     }
 
-    // Convert tools (could be String or List)
+    print('🔵 Converted ingredients: "$ingredients"');
+
+    // Convert tools
     String tools;
     if (aiData['tools'] is List) {
       tools = (aiData['tools'] as List).join(', ');
     } else {
-      tools = aiData['tools'] as String;
+      tools = aiData['tools'] as String? ?? '';
     }
 
+    // Map category
+    final categoryKey = _mapCategory(aiData['category']);
+
+    // Convert steps
+    final steps = (aiData['steps'] as List).asMap().entries.map((entry) {
+      final index = entry.key;
+      final step = entry.value;
+
+      return Step(
+        instruction: step['instruction'] ?? '',
+        heat: step['heat'],
+        seasonings: step['seasoning'],
+        timer: step['time'],
+        notes: step['notes'],
+        whatToLookFor: step['whatToLookFor'] ?? '',
+        index: index,
+      );
+    }).toList();
+
     return Recipe(
-      name: aiData['name'],
+      name: aiData['name'] ?? 'Untitled Recipe',
       ingredients: ingredients,
       tools: tools,
-      categoryKey: aiData['category'] ?? 'Dinner',
+      categoryKey: categoryKey,
       createdDate: DateTime.now(),
-      steps: (aiData['steps'] as List)
-          .map(
-            (step) => Step(
-              instruction: step['instruction'] ?? '',
-              heat: step['heat'],
-              index: step['index'] ?? 0,
-              seasonings: step['seasoning'],
-              timer: step['time'],
-              notes: step['notes'],
-              whatToLookFor: step['whatToLookFor'] ?? '',
-            ),
-          )
-          .toList(),
+      steps: steps,
     );
   }
+
+  String _mapCategory(String? aiCategory) {
+    if (aiCategory == null || aiCategory.isEmpty) {
+      return 'dinner';
+    }
+
+    final categoryMap = {
+      'breakfast': 'breakfast',
+      'lunch': 'lunch',
+      'dinner': 'dinner',
+      'lazy meals': 'lazy_meals',
+      'dessert': 'dessert',
+      'drinks': 'drinks',
+    };
+
+    final key = aiCategory.toLowerCase();
+    return categoryMap[key] ?? 'dinner';
+  }
+
+  // String _mapCategory(String? aiCategory) {
+  //   if (aiCategory == null || aiCategory.isEmpty) {
+  //     return 'dinner';
+  //   }
+
+  //   final categoryMap = {
+  //     'breakfast': 'breakfast',
+  //     'lunch': 'lunch',
+  //     'dinner': 'dinner',
+  //     'lazy meals': 'lazy_meals',
+  //     'dessert': 'dessert',
+  //     'drinks': 'drinks',
+  //   };
+
+  //   final key = aiCategory.toLowerCase();
+  //   return categoryMap[key] ?? 'dinner';
+  // }
 }

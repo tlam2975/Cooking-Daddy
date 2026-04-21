@@ -30,8 +30,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
 
   final RecipeRepository _repository = RecipeRepository();
 
-  List<StepData> steps = [StepData()]; // Start with one step
-  String? selectedCategoryKey;
+  List<StepData> steps = [StepData()];
+  String? selectedCategoryKey; // ← CHANGED: Store KEY not display name
 
   Future<List<String>> _loadCategories() async {
     return CategoryData.getDisplayNames(context.locale.languageCode);
@@ -75,15 +75,18 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     setState(() => _isGenerating = false);
 
     if (result.success && result.recipe != null) {
+      print('🟢 URL Generation SUCCESS: ${result.recipe!.name}');
       _fillFormWithRecipe(result.recipe!);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '✅ ${'recipeGenerated'.tr()} ${result.remainingQuota ?? 0} ${'remainingQuota'.tr()}',
+              '✅ ${'recipeGenerated'.tr()}: ${result.recipe!.name}\n'
+              '${result.remainingQuota ?? 0} ${'remainingQuota'.tr()}',
             ),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
           ),
         );
       }
@@ -93,23 +96,28 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
           SnackBar(
             content: Text('❌ ${result.error}'),
             backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
           ),
         );
       }
     }
   }
 
+  // FIXED: No more context.locale here!
   void _fillFormWithRecipe(Recipe recipe) {
+    print('🔵 _fillFormWithRecipe called for: ${recipe.name}');
+
     setState(() {
       _nameController.text = recipe.name;
       _urlController.text = recipe.url ?? '';
       _ingredientsController.text = recipe.ingredients;
       _toolsController.text = recipe.tools;
 
-      // Store KEY directly - NO context.locale here!
-      selectedCategoryKey = recipe.categoryKey; // ← Fixed!
+      // Store KEY directly - NO context.locale!
+      selectedCategoryKey = recipe.categoryKey;
+      print('🔵 Set categoryKey to: $selectedCategoryKey');
 
-      // Steps
+      // Fill steps
       steps = recipe.steps.map((step) {
         final stepData = StepData();
         stepData.instructionController.text = step.instruction;
@@ -131,26 +139,27 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       }
     });
 
-    // No more conversion here - it happens in build() where context is safe
+    print('🔵 Form filled successfully!');
   }
 
   @override
   void initState() {
     super.initState();
     randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
+
     print('🔵 Recipe Editor opened');
     print('🔵 widget.recipe is null? ${widget.recipe == null}');
+
     if (widget.recipe != null) {
       print('✅ Has recipe: ${widget.recipe!.name}');
-    }
 
-    // Pre-fill data if editing
-    if (widget.recipe != null) {
-      _fillFormWithRecipe(widget.recipe!);
+      // Pre-fill basic fields
       _nameController.text = widget.recipe!.name;
       _urlController.text = widget.recipe!.url ?? '';
       _ingredientsController.text = widget.recipe!.ingredients;
       _toolsController.text = widget.recipe!.tools;
+
+      // Store KEY - no context.locale!
       selectedCategoryKey = widget.recipe!.categoryKey;
 
       // Pre-fill steps
@@ -159,19 +168,19 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
         stepData.instructionController.text = step.instruction;
         stepData.heatController.text = step.heat ?? '';
         stepData.seasoningsController.text = step.seasonings ?? '';
-        stepData.timerMinController.text = step.timer != null
-            ? (step.timer! ~/ 60).toString()
-            : '';
-        stepData.timerSecController.text = step.timer != null
-            ? (step.timer! % 60).toString()
-            : '';
+
+        if (step.timer != null) {
+          stepData.timerMinController.text = (step.timer! ~/ 60).toString();
+          stepData.timerSecController.text = (step.timer! % 60).toString();
+        }
+
         stepData.notesController.text = step.notes ?? '';
         stepData.lookForController.text = step.whatToLookFor;
         return stepData;
       }).toList();
 
       if (steps.isEmpty) {
-        steps = [StepData()]; // Ensure at least one step
+        steps = [StepData()];
       }
     }
   }
@@ -183,21 +192,20 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
         : 'Caveat';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFEAEA), // Updated background color
+      backgroundColor: const Color(0xFFFFEAEA),
       body: SafeArea(
         bottom: false,
         left: false,
         right: false,
         child: Column(
           children: [
-            // Header - Updated AppBar color
+            // Header
             Container(
               width: double.infinity,
-              color: const Color(0xFFFFA4A4), // Updated AppBar color
+              color: const Color(0xFFFFA4A4),
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Stack(
                 children: [
-                  // Back button
                   Positioned(
                     left: 16,
                     top: 0,
@@ -211,7 +219,6 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
-                  // Title
                   Center(
                     child: Column(
                       children: [
@@ -284,36 +291,73 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                         onPressed: _isGenerating
                             ? null
                             : () async {
-                                // Check if URL field has content
                                 if (_urlController.text.trim().isNotEmpty) {
                                   // Has URL → Generate from URL
-                                  _generateFromURL();
+                                  print('🔵 Generating from URL...');
+                                  await _generateFromURL();
                                 } else {
                                   // No URL → Open AI Features
-                                  // AWAIT the result from AI Features
+                                  print('🔵 Opening AI Features modal...');
+
                                   final result = await Navigator.pushNamed(
                                     context,
                                     '/aiFeatures',
                                   );
 
-                                  // Handle the result
+                                  print(
+                                    '🔵 Received result from AI Features: $result',
+                                  );
+                                  print(
+                                    '🔵 Result type: ${result.runtimeType}',
+                                  );
+
                                   if (result != null &&
                                       result is AIGenerationResult) {
+                                    print('🔵 Result is AIGenerationResult');
+                                    print('🔵 Success: ${result.success}');
+                                    print(
+                                      '🔵 Has recipe: ${result.recipe != null}',
+                                    );
+
                                     if (result.success &&
                                         result.recipe != null) {
+                                      print(
+                                        '🟢 AI Generation SUCCESS: ${result.recipe!.name}',
+                                      );
+
                                       _fillFormWithRecipe(result.recipe!);
 
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            '✅ Recipe generated: ${result.recipe!.name}',
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              '✅ ${'recipeGenerated'.tr()}: ${result.recipe!.name}',
+                                            ),
+                                            backgroundColor: Colors.green,
+                                            duration: Duration(seconds: 3),
                                           ),
-                                          backgroundColor: Colors.green,
-                                        ),
+                                        );
+                                      }
+                                    } else {
+                                      print(
+                                        '🔴 Generation failed: ${result.error}',
                                       );
+
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('❌ ${result.error}'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
                                     }
+                                  } else {
+                                    print('🔴 Result is null or wrong type');
                                   }
                                 }
                               },
@@ -355,11 +399,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     _buildTextField('${'name'.tr()}*', _nameController),
                     const SizedBox(height: 16),
 
-                    // Ingredients Field
                     _buildTextField('ingredients'.tr(), _ingredientsController),
                     const SizedBox(height: 16),
 
-                    // Tools Field
                     _buildTextField('tools'.tr(), _toolsController),
                     const SizedBox(height: 24),
 
@@ -369,293 +411,292 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     }),
 
                     const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
 
-                    // Add Step Button
-                    // Sticky Bottom Bar
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEAEA),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 16,
-                            offset: const Offset(0, -4),
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                      child: SafeArea(
-                        top: false,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Add Step and Category Row
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                // Add Step Button
-                                ElevatedButton(
-                                  onPressed: _addStep,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                  child: Text(
-                                    'add_step'.tr(),
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                ),
-
-                                // Category Dropdown
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: // In your build method, inside the category dropdown section:
-                                  FutureBuilder<List<String>>(
-                                    future:
-                                        _loadCategories(), // Returns display names ["Breakfast", "Lunch"...]
-                                    builder: (context, snapshot) {
-                                      if (!snapshot.hasData) {
-                                        return const CircularProgressIndicator();
-                                      }
-
-                                      final categoryDisplayNames =
-                                          snapshot.data!;
-
-                                      // Convert stored KEY to DISPLAY NAME for dropdown
-                                      String? selectedDisplay;
-                                      if (selectedCategoryKey != null) {
-                                        selectedDisplay =
-                                            CategoryData.getDisplayName(
-                                              selectedCategoryKey!,
-                                              context
-                                                  .locale
-                                                  .languageCode, // ← SAFE here in build()
-                                            );
-                                      }
-
-                                      return DropdownButton<String>(
-                                        value: selectedDisplay,
-                                        hint: Text('selectCategory'.tr()),
-                                        items: categoryDisplayNames.map((
-                                          displayName,
-                                        ) {
-                                          return DropdownMenuItem(
-                                            value: displayName,
-                                            child: Text(displayName),
-                                          );
-                                        }).toList(),
-                                        onChanged: (String? newDisplayName) async {
-                                          if (newDisplayName != null) {
-                                            // Convert display name → key
-                                            final key =
-                                                await CategoryData.getKeyFromDisplay(
-                                                  newDisplayName,
-                                                  context.locale.languageCode,
-                                                );
-
-                                            setState(() {
-                                              selectedCategoryKey =
-                                                  key; // ← Store KEY
-                                            });
-                                          }
-                                        },
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
+            // Sticky Bottom Bar
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFEAEA),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, -4),
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Add Step Button
+                        ElevatedButton(
+                          onPressed: _addStep,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
                             ),
-                            const SizedBox(height: 12),
-                            // Done Button
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  try {
-                                    // Validate required fields
-                                    if (_nameController.text.isEmpty) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text('pleaseEnterName'.tr()),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                      return;
-                                    }
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: Text(
+                            'add_step'.tr(),
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
 
-                                    if (selectedCategoryKey == null ||
-                                        selectedCategoryKey == 'Category') {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'pleaseSelectCategory'.tr(),
-                                          ),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    // Save recipe logic here
-                                    final recipe = Recipe(
-                                      name: _nameController.text,
-                                      url: _urlController.text.isEmpty
-                                          ? null
-                                          : _urlController.text,
-                                      ingredients: _ingredientsController.text,
-                                      tools: _toolsController.text,
-                                      categoryKey: selectedCategoryKey!,
-                                      createdDate:
-                                          widget.recipe?.createdDate ??
-                                          DateTime.now(),
-                                      steps: steps.map((step) {
-                                        final timerMin =
-                                            int.tryParse(
-                                              step.timerMinController.text,
-                                            ) ??
-                                            0;
-                                        final timerSec =
-                                            int.tryParse(
-                                              step.timerSecController.text,
-                                            ) ??
-                                            0;
-                                        final totalSeconds =
-                                            (timerMin * 60) + timerSec;
-
-                                        return Step(
-                                          instruction:
-                                              step.instructionController.text,
-                                          heat: step.heatController.text.isEmpty
-                                              ? null
-                                              : step.heatController.text,
-                                          seasonings:
-                                              step
-                                                  .seasoningsController
-                                                  .text
-                                                  .isEmpty
-                                              ? null
-                                              : step.seasoningsController.text,
-                                          timer: totalSeconds > 0
-                                              ? totalSeconds
-                                              : null,
-                                          notes:
-                                              step.notesController.text.isEmpty
-                                              ? null
-                                              : step.notesController.text,
-                                          whatToLookFor:
-                                              step.lookForController.text,
-                                          index: steps.indexOf(step),
-                                        );
-                                      }).toList(),
-                                    );
-
-                                    if (widget.recipe != null) {
-                                      // Update existing recipe
-                                      recipe.id = widget.recipe!.id;
-                                      await _repository.updateRecipe(recipe);
-
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'recipe_updated'.tr(),
-                                            ),
-                                            backgroundColor: Colors.green,
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
-                                    } else {
-                                      // Add new recipe
-                                      await _repository.addRecipe(recipe);
-
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text('recipeAdded'.tr()),
-                                            backgroundColor: Colors.green,
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
-                                    }
-
-                                    if (mounted) {
-                                      Navigator.pop(context);
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            '${'error'.tr()}: ${e.toString()}',
-                                          ),
-                                          backgroundColor: Colors.red,
-                                          duration: const Duration(seconds: 3),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFB8E6F5),
-                                  foregroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
+                        // Category Dropdown - FIXED!
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: FutureBuilder<List<String>>(
+                            future: _loadCategories(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const SizedBox(
+                                  width: 120,
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                child: Text(
-                                  'done'.tr(),
-                                  style: TextStyle(
-                                    fontSize: 18,
+                                );
+                              }
+
+                              final categoryDisplayNames = snapshot.data!;
+
+                              // Convert KEY → DISPLAY NAME (safe here in build)
+                              String? selectedDisplay;
+                              if (selectedCategoryKey != null) {
+                                selectedDisplay = CategoryData.getDisplayName(
+                                  selectedCategoryKey!,
+                                  context.locale.languageCode,
+                                );
+                              }
+
+                              return DropdownButton<String>(
+                                value: selectedDisplay,
+                                hint: Text(
+                                  'category'.tr(),
+                                  style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ),
-                            ),
-                          ],
+                                underline: const SizedBox(),
+                                icon: const Icon(Icons.arrow_drop_down),
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 16,
+                                  fontFamily: currentFont,
+                                ),
+                                items: categoryDisplayNames.map((displayName) {
+                                  return DropdownMenuItem<String>(
+                                    value: displayName,
+                                    child: Text(displayName),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newDisplayName) async {
+                                  if (newDisplayName != null) {
+                                    // Convert DISPLAY NAME → KEY
+                                    final key =
+                                        await CategoryData.getKeyFromDisplay(
+                                          newDisplayName,
+                                          context.locale.languageCode,
+                                        );
+
+                                    setState(() {
+                                      selectedCategoryKey = key;
+                                    });
+
+                                    print(
+                                      '🔵 Category changed to: $key (display: $newDisplayName)',
+                                    );
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Done Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            // Validate
+                            if (_nameController.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('pleaseEnterName'.tr()),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            if (selectedCategoryKey == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('pleaseSelectCategory'.tr()),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            // Create recipe
+                            final recipe = Recipe(
+                              name: _nameController.text.trim(),
+                              url: _urlController.text.trim().isEmpty
+                                  ? null
+                                  : _urlController.text.trim(),
+                              ingredients: _ingredientsController.text.trim(),
+                              tools: _toolsController.text.trim(),
+                              categoryKey: selectedCategoryKey!, // Use KEY
+                              createdDate:
+                                  widget.recipe?.createdDate ?? DateTime.now(),
+                              steps: steps.map((stepData) {
+                                final timerMin =
+                                    int.tryParse(
+                                      stepData.timerMinController.text,
+                                    ) ??
+                                    0;
+                                final timerSec =
+                                    int.tryParse(
+                                      stepData.timerSecController.text,
+                                    ) ??
+                                    0;
+                                final totalSeconds = (timerMin * 60) + timerSec;
+
+                                return Step(
+                                  instruction: stepData
+                                      .instructionController
+                                      .text
+                                      .trim(),
+                                  heat:
+                                      stepData.heatController.text
+                                          .trim()
+                                          .isEmpty
+                                      ? null
+                                      : stepData.heatController.text.trim(),
+                                  seasonings:
+                                      stepData.seasoningsController.text
+                                          .trim()
+                                          .isEmpty
+                                      ? null
+                                      : stepData.seasoningsController.text
+                                            .trim(),
+                                  timer: totalSeconds > 0 ? totalSeconds : null,
+                                  notes:
+                                      stepData.notesController.text
+                                          .trim()
+                                          .isEmpty
+                                      ? null
+                                      : stepData.notesController.text.trim(),
+                                  whatToLookFor: stepData.lookForController.text
+                                      .trim(),
+                                  index: steps.indexOf(stepData),
+                                );
+                              }).toList(),
+                            );
+
+                            if (widget.recipe != null) {
+                              // Update
+                              recipe.id = widget.recipe!.id;
+                              await _repository.updateRecipe(recipe);
+
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('recipe_updated'.tr()),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } else {
+                              // Add new
+                              await _repository.addRecipe(recipe);
+
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('recipeAdded'.tr()),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            }
+
+                            if (mounted) {
+                              Navigator.pop(context);
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${'error'.tr()}: ${e.toString()}',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFB8E6F5),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: Text(
+                          'done'.tr(),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -673,7 +714,6 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   }) {
     return Row(
       children: [
-        // Use RichText to color parts differently
         isRequired
             ? RichText(
                 text: TextSpan(
@@ -710,7 +750,6 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   }
 
   Widget _buildStepCard(int index) {
-    // String label;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -741,7 +780,6 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
           _buildStepField(
             'instruction'.tr(),
             steps[index].instructionController,
-            // isRequired: true,
           ),
           const SizedBox(height: 8),
           _buildStepField('heat'.tr(), steps[index].heatController),
@@ -783,11 +821,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
           const SizedBox(height: 8),
           _buildStepField('notes'.tr(), steps[index].notesController),
           const SizedBox(height: 8),
-          _buildStepField(
-            'lookFor'.tr(),
-            steps[index].lookForController,
-            // isRequired: true,
-          ),
+          _buildStepField('lookFor'.tr(), steps[index].lookForController),
         ],
       ),
     );
@@ -819,7 +853,6 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   }
 }
 
-// Helper class to manage step data
 class StepData {
   final TextEditingController instructionController = TextEditingController();
   final TextEditingController heatController = TextEditingController();
