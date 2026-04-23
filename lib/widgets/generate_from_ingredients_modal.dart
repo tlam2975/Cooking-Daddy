@@ -37,6 +37,9 @@ class _GenerateFromIngredientsModalState
       return;
     }
 
+    print('🔵 ===== MODAL GENERATING =====');
+    print('🔵 Ingredients: "${_ingredientsController.text.trim()}"');
+
     setState(() => _isGenerating = true);
 
     final result = await _aiService.generateFromIngredients(
@@ -51,45 +54,27 @@ class _GenerateFromIngredientsModalState
 
     setState(() => _isGenerating = false);
 
-    if (mounted) {
-      if (result.success && result.recipe != null) {
-        Navigator.of(context).pop(result);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.error ?? 'Generation failed'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    print('🔵 Got result - success: ${result.success}');
+    print('🔵 Recipe null? ${result.recipe == null}');
+
+    if (!mounted) return;
 
     if (result.success && result.recipe != null) {
       print('✅ Modal: Recipe created: ${result.recipe!.name}');
-      print('✅ Modal: Steps count: ${result.recipe!.steps.length}');
-      Navigator.of(context).pop(result); // ← Returns result
+      print('✅ Popping modal with recipe');
+
+      // Pop ONCE with result
+      Navigator.of(context).pop(result);
     } else {
+      print('❌ Showing error: ${result.error}');
+
+      // Show error, DON'T pop
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.error ?? 'Generation failed'),
           backgroundColor: Colors.red,
         ),
       );
-    }
-
-    print('🔵 Got result - success: ${result.success}');
-    print('🔵 Recipe null? ${result.recipe == null}');
-    if (result.recipe != null) {
-      print('🔵 Recipe name: ${result.recipe!.name}');
-      print('🔵 Recipe steps: ${result.recipe!.steps.length}');
-    }
-
-    if (result.success && result.recipe != null) {
-      print('✅ Popping modal with recipe');
-      Navigator.of(context).pop(result);
-    } else {
-      print('❌ Showing error: ${result.error}');
-      // ... show error
     }
   }
 

@@ -100,10 +100,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _pickRandomQuote() {
-    setState(() {
-      randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
-      print('Quote picked: $randomQuote');
-    });
+    if (mounted) {
+      setState(() {
+        randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
+        print('Quote picked: $randomQuote');
+      });
+    }
   }
 
   // Add at the top of _HomeScreenState class
@@ -118,39 +120,48 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadRecipes() async {
-    setState(() {
-      isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+      });
+    }
 
     final fetchedRecipes = await _repository.getAllRecipes();
 
-    setState(() {
-      recipes = fetchedRecipes;
-      filteredRecipes = fetchedRecipes;
-      isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        recipes = fetchedRecipes;
+        filteredRecipes = fetchedRecipes;
+        isLoading = false;
+      });
+    }
   }
 
   Future<void> _filterByCategory(String? categoryDisplay) async {
     if (categoryDisplay == null) {
-      setState(() {
-        selectedCategoryFilter = null;
-      });
+      if (mounted) {
+        setState(() {
+          selectedCategoryFilter = null;
+        });
+      }
     } else {
-      // Convert display name to key
       final key = CategoryData.getKeyFromDisplay(
         categoryDisplay,
         context.locale.languageCode,
       );
 
-      setState(() {
-        selectedCategoryFilter = key; // Store key, not display
-      });
+      if (mounted) {
+        // ← Add this
+        setState(() {
+          selectedCategoryFilter = key;
+        });
+      }
     }
 
     _filterRecipes();
 
-    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+    if (mounted && (_scaffoldKey.currentState?.isDrawerOpen ?? false)) {
+      // ← Add mounted check
       Navigator.pop(context);
     }
   }
@@ -160,22 +171,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _filterRecipes() {
-    setState(() {
-      filteredRecipes = recipes.where((recipe) {
-        final searchQuery = _searchController.text.toLowerCase();
-        final matchesSearch =
-            searchQuery.isEmpty ||
-            recipe.name.toLowerCase().contains(searchQuery) ||
-            (recipe.ingredients.toLowerCase().contains(searchQuery)) ||
-            (recipe.tools.toLowerCase().contains(searchQuery));
+    if (mounted) {
+      // ← Add this
+      setState(() {
+        filteredRecipes = recipes.where((recipe) {
+          final searchQuery = _searchController.text.toLowerCase();
+          final matchesSearch =
+              searchQuery.isEmpty ||
+              recipe.name.toLowerCase().contains(searchQuery) ||
+              (recipe.ingredients.toLowerCase().contains(searchQuery)) ||
+              (recipe.tools.toLowerCase().contains(searchQuery));
 
-        final matchesCategory =
-            selectedCategoryFilter == null ||
-            recipe.categoryKey == selectedCategoryFilter;
+          final matchesCategory =
+              selectedCategoryFilter == null ||
+              recipe.categoryKey == selectedCategoryFilter;
 
-        return matchesSearch && matchesCategory;
-      }).toList();
-    });
+          return matchesSearch && matchesCategory;
+        }).toList();
+      });
+    }
   }
 
   @override
@@ -673,5 +687,12 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged); // ← Remove listener
+    _searchController.dispose(); // ← Dispose controller
+    super.dispose();
   }
 }

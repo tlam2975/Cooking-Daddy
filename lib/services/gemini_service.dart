@@ -19,7 +19,7 @@ class GeminiService implements AIInterface {
   }) async {
     try {
       print('🔵 ===== GEMINI SERVICE =====');
-      print('🔵 Calling: $baseUrl/api/generate-from-ingredients');
+      print('🔵 Calling: $baseUrl/api/smart-generate');
       print('🔵 Ingredients: "$ingredients"');
       print('🔵 Tools: "$tools"');
       print('🔵 Dish: "$dish"');
@@ -53,14 +53,18 @@ class GeminiService implements AIInterface {
           )
           .timeout(const Duration(seconds: 60));
 
+      print(response.statusCode);
+      print(response.body);
       print('🔵 Response received from server: ${response}');
       print('🟢 Response status: ${response.statusCode}');
       print('🟢 Response body: ${response.body}');
 
       if (response.body.contains('"success": true')) {
         final data = jsonDecode(response.body);
+        print('Fetched data successfullly!');
 
-        if (data['success'] == true && data['recipe'] != null) {
+        if (response.body.contains('"success": true') &&
+            data['recipe'] != null) {
           final recipe = _convertToRecipe(data['recipe']);
           print('✅ Recipe converted: ${recipe.name}');
 
@@ -82,7 +86,7 @@ class GeminiService implements AIInterface {
           error: 'Daily quota exceeded',
         );
       } else {
-        print('❌ Error status: ${response.statusCode}');
+        print(' Error status: ${response.statusCode}');
         final data = jsonDecode(response.body);
         return AIGenerationResult(
           success: false,
@@ -118,6 +122,14 @@ class GeminiService implements AIInterface {
             body: jsonEncode({'url': url}),
           )
           .timeout(const Duration(seconds: 60));
+
+      // final response = await http
+      //     .get(
+      //       Uri.parse('$baseUrl/api/generate-from-url'),
+      //       headers: {'Content-Type': 'application/json'},
+      //       // body: jsonEncode({'url': url}),
+      //     )
+      // .timeout(const Duration(seconds: 60));
 
       print('🟢 Response status: ${response.statusCode}');
       print('🟢 Response body: ${response.body}');
