@@ -94,5 +94,18 @@
     "error": "Lỗi",
     "instruction": "Hướng dẫn",
     "generate_from_url_description": "Trích xuất công thức từ URL",
-    "generate_from_recipe_description": "Tạo công thức từ nguyên liệu có sẵn"
+    "generate_from_recipe_description": "Tạo công thức từ nguyên liệu có sẵn",
+    "todays_suggestion": "Gợi ý hôm nay",
+    "greeting_hello": "Xin chào!",
+    "theme": "Giao diện",
+    "sign_out": "Đăng xuất",
+    "not_signed_in": "Chưa đăng nhập",
+    "profile_screen_placeholder": "Trang cá nhân",
+    "generated_success": "✅ Đã tạo: {name}",
+    "error_prefix": "❌ {error}",
+    "sign_in_failed": "Đăng nhập thất bại: {reason}",
+    "what_to_cook_today": "Hôm nay nấu món gì nhỉ?",
+    "find_recipes": "Tìm công thức, nguyên liệu...",
+    "add_first_recipe": "Thêm công thức đầu tiên của bạn để bắt đầu",
+    "login_to_save_and_sync_recipes": "Đăng nhập để lưu và đồng bộ công thức của bạn!"
 }

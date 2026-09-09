@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "978035655325",
+    "project_id": "cooking-daddy-83353",
+    "storage_bucket": "cooking-daddy-83353.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:978035655325:android:21abafa26f7ad3e0a54a74",
+        "android_client_info": {
+          "package_name": "com.tlam.cookingdaddy"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "978035655325-th7gtboqvt1j044ub1uvllptf660ffq1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBoL9ZYVpYLYaCfHGGNz8gQtXZnUr0CG7I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "978035655325-th7gtboqvt1j044ub1uvllptf660ffq1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'dart:math';
-import '../data/models/quotes.dart';
+import '../data/repositories/auth_repository.dart';
+import '../theme/app_theme.dart';
+import '../theme/theme_controller.dart';
 
+/// NOTE: Account/Theme section labels are hardcoded Vietnamese for now —
+/// not yet wired to easy_localization, same to-do flagged on
+/// sign_in_screen.dart. Language section keeps its existing .tr() keys
+/// since that logic isn't changing. The old random-quote header was
+/// dropped — it didn't fit the revamped design and there's no mockup
+/// reference for this screen, flagging that as a judgment call.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -11,134 +18,153 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late String randomQuote;
-
-  @override
-  void initState() {
-    super.initState();
-    randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
-  }
+  final AuthRepository _authRepository = AuthRepository();
 
   @override
   Widget build(BuildContext context) {
+    final user = _authRepository.currentUser;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFFEAEA),
+      backgroundColor: AppColors.background,
       body: SafeArea(
-        bottom: false,
-        left: false,
-        right: false,
-        child: Column(
-          children: [
-            // Header
-            Container(
-              width: double.infinity,
-              color: const Color(0xFFFFA4A4),
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Stack(
-                children: [
-                  // Back button
-                  Positioned(
-                    left: 16,
-                    top: 0,
-                    bottom: 0,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        size: 32,
-                        color: Colors.black,
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                  // Title
-                  Center(
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Cooking Daddy',
-                          style: TextStyle(
-                            fontSize: 40,
-                            color: Color.fromARGB(255, 255, 230, 0),
-                          ),
-                        ),
-                        Text(
-                          randomQuote,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Cài đặt',
+                style: AppTextStyles.sectionTitle.copyWith(fontSize: 26),
               ),
-            ),
+              const SizedBox(height: 20),
 
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              _sectionCard(
+                child: Row(
                   children: [
-                    Text(
-                      'settings'.tr(),
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: AppColors.primaryLight,
+                      backgroundImage: user?.photoURL != null
+                          ? NetworkImage(user!.photoURL!)
+                          : null,
+                      child: user?.photoURL == null
+                          ? Icon(
+                              Icons.person,
+                              color: AppColors.primary,
+                              size: 28,
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user?.displayName ?? 'Chưa đăng nhập',
+                            style: AppTextStyles.cardTitle,
+                          ),
+                          if (user?.email != null)
+                            Text(user!.email!, style: AppTextStyles.caption),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-
-                    // Language Setting
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
+                    TextButton(
+                      onPressed: () => _authRepository.signOut(),
+                      // AuthGate's authStateChanges listener handles
+                      // navigation back to SignInScreen automatically.
+                      child: Text(
+                        'Đăng xuất',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.primary,
                         ),
-                        leading: const Icon(
-                          Icons.language,
-                          size: 32,
-                          color: Color(0xFFFFA4A4),
-                        ),
-                        title: Text(
-                          'language'.tr(),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(
-                          context.locale.languageCode == 'en'
-                              ? 'english'.tr()
-                              : 'vietnamese'.tr(),
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        trailing: const Icon(Icons.arrow_forward_ios),
-                        onTap: () => _showLanguageDialog(),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
 
-            // Footer
+              const SizedBox(height: 24),
+              Text('Giao diện', style: AppTextStyles.sectionTitle),
+              const SizedBox(height: 12),
+              _sectionCard(
+                child: Column(
+                  children: ThemePreset.values.map(_presetTile).toList(),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+              Text('language'.tr(), style: AppTextStyles.sectionTitle),
+              const SizedBox(height: 12),
+              _sectionCard(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    Icons.language,
+                    color: AppColors.primary,
+                    size: 28,
+                  ),
+                  title: Text(
+                    context.locale.languageCode == 'en'
+                        ? 'english'.tr()
+                        : 'vietnamese'.tr(),
+                    style: AppTextStyles.cardTitle,
+                  ),
+                  trailing: Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                  onTap: _showLanguageDialog,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+              Center(
+                child: Text('copyright'.tr(), style: AppTextStyles.caption),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionCard({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _presetTile(ThemePreset preset) {
+    final isSelected = ThemeController.instance.preset == preset;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => ThemeController.instance.setPreset(preset),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                'copyright'.tr(),
-                style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: preset.previewColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.border),
               ),
             ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(preset.label, style: AppTextStyles.body)),
+            if (isSelected)
+              Icon(Icons.check_circle, color: AppColors.primary, size: 20),
           ],
         ),
       ),
@@ -158,14 +184,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: 'en',
                 groupValue: context.locale.languageCode,
                 onChanged: (value) {
-                  context.setLocale(Locale('en'));
+                  context.setLocale(const Locale('en'));
                   Navigator.pop(context);
                   setState(() {});
                 },
               ),
               title: Text('english'.tr()),
               onTap: () {
-                context.setLocale(Locale('en'));
+                context.setLocale(const Locale('en'));
                 Navigator.pop(context);
                 setState(() {});
               },
@@ -175,14 +201,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: 'vi',
                 groupValue: context.locale.languageCode,
                 onChanged: (value) {
-                  context.setLocale(Locale('vi'));
+                  context.setLocale(const Locale('vi'));
                   Navigator.pop(context);
                   setState(() {});
                 },
               ),
               title: Text('vietnamese'.tr()),
               onTap: () {
-                context.setLocale(Locale('vi'));
+                context.setLocale(const Locale('vi'));
                 Navigator.pop(context);
                 setState(() {});
               },

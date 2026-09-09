@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 from gemini_service import GeminiService
 from models import SmartGenerateRequest
-from test import build_prompt_from_URL
+from prompts import build_prompt_from_URL
 from test_youtube import get_youtube_transcript
 from service import SmartRecipeService
 

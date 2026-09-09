@@ -94,5 +94,18 @@
     "error": "Error",
     "instruction": "Instructions",
     "generate_from_url_description": "Extract recipe from YouTube or blog",
-    "generate_from_recipe_description": "Create a recipe from what you have"
+    "generate_from_recipe_description": "Create a recipe from what you have",
+    "todays_suggestion": "Today's suggestion",
+    "greeting_hello": "Hello!",
+    "theme": "Theme",
+    "sign_out": "Sign out",
+    "not_signed_in": "Not signed in",
+    "profile_screen_placeholder": "Profile Screen",
+    "generated_success": "✅ Generated: {name}",
+    "error_prefix": "❌ {error}",
+    "sign_in_failed": "Sign-in failed: {reason}",
+    "what_to_cook_today": "What to cook today?",
+    "find_recipes": "Find Recipe",
+    "add_first_recipe": "Let's add a recipe to start!",
+    "login_to_save_and_sync_recipes": "Login to save and sync your recipes!"
 }

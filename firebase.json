@@ -1,0 +1,41 @@
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "cooking-daddy-83353",
+                    "appId": "1:978035655325:android:21abafa26f7ad3e0a54a74",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "ios": {
+                "default": {
+                    "projectId": "cooking-daddy-83353",
+                    "appId": "1:978035655325:ios:76f5a8193ea22be4a54a74",
+                    "uploadDebugSymbols": false,
+                    "fileOutput": "ios/Runner/GoogleService-Info.plist"
+                }
+            },
+            "macos": {
+                "default": {
+                    "projectId": "cooking-daddy-83353",
+                    "appId": "1:978035655325:ios:b4ef524086596bfda54a74",
+                    "uploadDebugSymbols": false,
+                    "fileOutput": "macos/Runner/GoogleService-Info.plist"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "cooking-daddy-83353",
+                    "configurations": {
+                        "android": "1:978035655325:android:21abafa26f7ad3e0a54a74",
+                        "ios": "1:978035655325:ios:76f5a8193ea22be4a54a74",
+                        "macos": "1:978035655325:ios:b4ef524086596bfda54a74",
+                        "web": "1:978035655325:web:618af299573645cea54a74",
+                        "windows": "1:978035655325:web:a27a6b30d2f0e641a54a74"
+                    }
+                }
+            }
+        }
+    }
+}
