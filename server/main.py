@@ -42,6 +42,7 @@ sampleRecipe = {
         ],
         "name": "Pan-Seared Beef with Garlicky Asparagus and Crispy Potatoes",
         "category": "dinner",
+        "tags": ["high-protein", "comfort", "dinner"],
         "steps": [
             {
                 "instruction": "Wash and peel the potatoes, then slice them into 0.5 cm thick rounds or small cubes.",

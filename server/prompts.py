@@ -2,6 +2,7 @@ RECIPE_JSON_SHAPE = """
 {
   "name": "string",
   "category": "breakfast|lunch|dinner|dessert|drinks|lazy meals",
+  "tags": ["quick|healthy|budget|comfort|spicy|vegetarian|high-protein|light|kid-friendly|one-pot|no-cook|meal-prep|breakfast|lunch|dinner|dessert|drink"],
   "ingredients": [
     {"name": "string", "quantity": 0, "unit": "g|kg|ml|l|tsp|tbsp|cup|pcs|null", "note": "string"}
   ],
@@ -28,6 +29,7 @@ Use this exact shape:
 
 Rules:
 - Top-level "name", "category", "ingredients", "tools", and "steps" are required.
+- Include 1-5 "tags" from this vocabulary only: quick, healthy, budget, comfort, spicy, vegetarian, high-protein, light, kid-friendly, one-pot, no-cook, meal-prep, breakfast, lunch, dinner, dessert, drink.
 - Ingredient "name" is required.
 - Ingredient "quantity", "unit", and "note" may be null when unknown.
 - Ingredient "unit" must be one of: g, kg, ml, l, tsp, tbsp, cup, pcs, or null.

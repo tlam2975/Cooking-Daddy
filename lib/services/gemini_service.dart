@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../data/models/recipe_tags.dart';
 import 'package:http/http.dart' as http;
 import '../data/models/recipe.dart';
 import 'ai_interface.dart';
@@ -251,8 +252,15 @@ class GeminiService implements AIInterface {
       categoryKey: categoryKey,
       createdDate: now,
       updatedAt: now,
+      tags: _parseTags(aiData['tags']),
       steps: steps,
     );
+  }
+
+  List<String> _parseTags(dynamic value) {
+    if (value is List) return RecipeTags.normalizeAll(value);
+    if (value is String) return RecipeTags.normalizeAll(value.split(','));
+    return const [];
   }
 
   bool _isSuccess(Map<String, dynamic> data) {

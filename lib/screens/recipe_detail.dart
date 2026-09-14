@@ -278,6 +278,16 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 32),
+                          if (recipe!.tags.isNotEmpty) ...[
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: recipe!.tags.map((tag) {
+                                return Chip(label: Text(tag));
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
                           _buildPortionSelector(),
                           const SizedBox(height: 24),
 

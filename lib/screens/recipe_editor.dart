@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:cooking_daddy/data/models/quotes.dart';
 import '../data/models/recipe.dart';
+import '../data/models/recipe_tags.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import '../data/repositories/recipe_repository.dart';
@@ -24,6 +25,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _ingredientsController = TextEditingController();
   final TextEditingController _toolsController = TextEditingController();
+  final TextEditingController _tagsController = TextEditingController();
   final AIInterface _aiService = GeminiService();
   bool _isGenerating = false;
 
@@ -44,6 +46,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     _urlController.dispose();
     _ingredientsController.dispose();
     _toolsController.dispose();
+    _tagsController.dispose();
     super.dispose();
   }
 
@@ -113,6 +116,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       _urlController.text = recipe.url ?? '';
       _ingredientsController.text = _formatIngredients(recipe.ingredients);
       _toolsController.text = _formatTools(recipe.tools);
+      _tagsController.text = recipe.tags.join(', ');
 
       // Store KEY directly - NO context.locale!
       selectedCategoryKey = recipe.categoryKey;
@@ -161,6 +165,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
         widget.recipe!.ingredients,
       );
       _toolsController.text = _formatTools(widget.recipe!.tools);
+      _tagsController.text = widget.recipe!.tags.join(', ');
 
       // Store KEY - no context.locale!
       selectedCategoryKey = widget.recipe!.categoryKey;
@@ -408,6 +413,20 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     _buildTextField('tools'.tr(), _toolsController),
                     const SizedBox(height: 24),
 
+                    _buildTextField('Tags', _tagsController),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: RecipeTags.values.map((tag) {
+                        return ActionChip(
+                          label: Text(tag),
+                          onPressed: () => _addTag(tag),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+
                     // Steps
                     ...List.generate(steps.length, (index) {
                       return _buildStepCard(index);
@@ -605,7 +624,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                               isSeed: widget.recipe?.isSeed ?? false,
                               sourceRecipeId: widget.recipe?.sourceRecipeId,
                               energyNote: widget.recipe?.energyNote,
-                              tags: widget.recipe?.tags ?? const [],
+                              tags: _parseTags(_tagsController.text),
                               steps: steps.map((stepData) {
                                 final timerMin =
                                     int.tryParse(
@@ -939,6 +958,16 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
           );
         })
         .toList();
+  }
+
+  void _addTag(String tag) {
+    final tags = _parseTags(_tagsController.text);
+    if (!tags.contains(tag)) tags.add(tag);
+    _tagsController.text = tags.join(', ');
+  }
+
+  List<String> _parseTags(String text) {
+    return RecipeTags.normalizeAll(text.split(','));
   }
 
   MeasurementUnit? _parseUnit(String? value) {

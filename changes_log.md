@@ -37,3 +37,10 @@
 - Added the first real Favorites screen and wired the bottom-nav favorites tab plus `/favorites` route to it.
 - Removed the unused in-shell placeholder tab now that Shopping and Favorites are real screens.
 - Verified Phase 2 with `flutter analyze --no-fatal-infos`.
+- Started Phase 3 tags work.
+- Added a fixed Dart tag vocabulary and normalization helper.
+- Updated Gemini conversion and backend prompt/sample contract to support suggested recipe tags.
+- Added tags to built-in seed recipes.
+- Added tag editing in the recipe editor with vocabulary chips and normalized comma-separated input.
+- Added tag search and tag chips on home cards and recipe detail.
+- Verified Phase 3 with `python3 -B -m py_compile server/main.py server/prompts.py`, `flutter analyze --no-fatal-infos`, and `flutter test test/shopping_cart_test.dart`.

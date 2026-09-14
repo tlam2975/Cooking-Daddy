@@ -203,11 +203,13 @@ class _HomePageState extends State<HomePage> {
               )
               .join(' ')
               .toLowerCase();
+          final tagText = recipe.tags.join(' ').toLowerCase();
           final matchesSearch =
               searchQuery.isEmpty ||
               recipe.name.toLowerCase().contains(searchQuery) ||
               ingredientText.contains(searchQuery) ||
-              toolText.contains(searchQuery);
+              toolText.contains(searchQuery) ||
+              tagText.contains(searchQuery);
 
           final matchesCategory =
               selectedCategoryFilter == null ||
@@ -545,6 +547,33 @@ class _HomePageState extends State<HomePage> {
                                                               Colors.grey[500],
                                                         ),
                                                       ),
+                                                      if (recipe
+                                                          .tags
+                                                          .isNotEmpty) ...[
+                                                        const SizedBox(
+                                                          height: 8,
+                                                        ),
+                                                        Wrap(
+                                                          spacing: 6,
+                                                          runSpacing: 6,
+                                                          children: recipe.tags
+                                                              .take(3)
+                                                              .map(
+                                                                (tag) => Chip(
+                                                                  label: Text(
+                                                                    tag,
+                                                                  ),
+                                                                  visualDensity:
+                                                                      VisualDensity
+                                                                          .compact,
+                                                                  materialTapTargetSize:
+                                                                      MaterialTapTargetSize
+                                                                          .shrinkWrap,
+                                                                ),
+                                                              )
+                                                              .toList(),
+                                                        ),
+                                                      ],
                                                     ],
                                                   ),
                                                 ),
