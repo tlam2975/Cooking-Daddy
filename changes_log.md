@@ -44,3 +44,9 @@
 - Added tag editing in the recipe editor with vocabulary chips and normalized comma-separated input.
 - Added tag search and tag chips on home cards and recipe detail.
 - Verified Phase 3 with `python3 -B -m py_compile server/main.py server/prompts.py`, `flutter analyze --no-fatal-infos`, and `flutter test test/shopping_cart_test.dart`.
+- Started Phase 4 Firestore sync work.
+- Added Firestore recipe serialization/deserialization and tombstone delete support.
+- Added a recipe sync service that merges local/remote recipes by `cloudId` and `updatedAt`.
+- Updated the recipe repository to best-effort push add/update changes and write tombstones on delete when signed in.
+- Wired signed-in app startup through a one-shot recipe sync gate before showing the main shell.
+- Verified Phase 4 statically with `flutter analyze --no-fatal-infos` and regression-tested `flutter test test/shopping_cart_test.dart`; live Firebase sync still needs signed-in manual testing.
