@@ -20,7 +20,13 @@ class RecipeSyncService {
       final remoteRecipe = document.recipe;
 
       if (remoteRecipe == null) {
-        await _applyRemoteTombstone(document, localByCloudId);
+        final tombstoneWins = await _applyRemoteTombstone(
+          document,
+          localByCloudId,
+        );
+        if (tombstoneWins) {
+          remoteCloudIds.add(document.cloudId);
+        }
         continue;
       }
 
@@ -44,19 +50,24 @@ class RecipeSyncService {
     }
   }
 
-  Future<void> _applyRemoteTombstone(
+  Future<bool> _applyRemoteTombstone(
     FirestoreRecipeDocument document,
     Map<String, Recipe> localByCloudId,
   ) async {
     final deletedAt = document.deletedAt;
-    if (deletedAt == null) return;
+    if (deletedAt == null) return false;
 
     final localRecipe = localByCloudId[document.cloudId];
-    if (localRecipe != null && deletedAt.isAfter(localRecipe.updatedAt)) {
+    if (localRecipe == null) return true;
+
+    if (!deletedAt.isBefore(localRecipe.updatedAt)) {
       await IsarDatasource.isar.writeTxn(() async {
         await IsarDatasource.isar.recipes.delete(localRecipe.id);
       });
+      return true;
     }
+
+    return false;
   }
 
   Future<void> _putLocal(Recipe recipe) async {

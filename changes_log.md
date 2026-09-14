@@ -66,3 +66,4 @@
 - Added hero image previews on the recipe editor, home cards, favorites list, and recipe detail screen.
 - Verified Phase 7 with `python3 -B -m py_compile server/main.py server/hero_image_service.py`, a local `extract_hero_image` sample check, `flutter analyze --no-fatal-infos`, and `flutter test test/shopping_cart_test.dart`.
 - 2026-09-14 18:37:03 +07 — Updated the change-log convention: all new entries from this point forward should include full local timestamps.
+- 2026-09-14 18:40:47 +07 — Fixed Firestore sync tombstone handling so a newer remote delete cannot be accidentally pushed back from the stale local sync snapshot.
