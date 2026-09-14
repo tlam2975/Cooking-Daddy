@@ -509,6 +509,40 @@ class _HomePageState extends State<HomePage> {
                                           ),
                                           child: Row(
                                             children: [
+                                              if (recipe.imageUrl != null &&
+                                                  recipe
+                                                      .imageUrl!
+                                                      .isNotEmpty) ...[
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  child: Image.network(
+                                                    recipe.imageUrl!,
+                                                    width: 72,
+                                                    height: 72,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder:
+                                                        (
+                                                          context,
+                                                          error,
+                                                          stackTrace,
+                                                        ) {
+                                                          return Container(
+                                                            width: 72,
+                                                            height: 72,
+                                                            color: const Color(
+                                                              0xFFFFEAEA,
+                                                            ),
+                                                            child: const Icon(
+                                                              Icons
+                                                                  .image_not_supported_outlined,
+                                                            ),
+                                                          );
+                                                        },
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 14),
+                                              ],
                                               // Recipe info (tappable)
                                               Expanded(
                                                 child: GestureDetector(

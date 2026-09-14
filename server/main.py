@@ -15,6 +15,7 @@ from prompts import (
 from youtube_service import get_youtube_transcript
 from service import SmartRecipeService
 from dashboard_service import DashboardService
+from hero_image_service import find_hero_image
 
 # Load env
 load_dotenv()
@@ -273,6 +274,11 @@ def generate_from_url():
 
         if is_gemini_error(recipe):
             return jsonify({'success': False, 'error': recipe['error']}), 422
+
+        recipe['url'] = url
+        image_url = find_hero_image(url)
+        if image_url and not recipe.get('imageUrl'):
+            recipe['imageUrl'] = image_url
 
         return jsonify({
             'success': True,

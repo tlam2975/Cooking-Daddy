@@ -403,6 +403,30 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 32),
+                          if (recipe!.imageUrl != null &&
+                              recipe!.imageUrl!.isNotEmpty) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                recipe!.imageUrl!,
+                                width: double.infinity,
+                                height: 220,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 120,
+                                    alignment: Alignment.center,
+                                    color: Colors.white,
+                                    child: const Icon(
+                                      Icons.image_not_supported_outlined,
+                                      size: 32,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
                           if (recipe!.tags.isNotEmpty) ...[
                             Wrap(
                               spacing: 8,

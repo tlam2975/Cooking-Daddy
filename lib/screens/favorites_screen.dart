@@ -82,6 +82,24 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         borderRadius: BorderRadius.circular(8),
                         child: ListTile(
                           onTap: () => _openRecipe(recipe),
+                          leading:
+                              recipe.imageUrl != null &&
+                                  recipe.imageUrl!.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    recipe.imageUrl!,
+                                    width: 48,
+                                    height: 48,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Icon(
+                                        Icons.image_not_supported_outlined,
+                                      );
+                                    },
+                                  ),
+                                )
+                              : null,
                           title: Text(
                             recipe.name,
                             style: AppTextStyles.cardTitle,

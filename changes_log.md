@@ -60,3 +60,8 @@
 - Added a Flutter energy note service with server call plus local fallback.
 - Added recipe detail actions for creating an editable remix clone and generating/saving an on-demand energy note.
 - Verified Phase 6 with `python3 -B -m py_compile server/main.py server/prompts.py`, `flutter analyze --no-fatal-infos`, `curl http://127.0.0.1:2975/api/energy-note`, and `flutter test test/shopping_cart_test.dart`.
+- Started Phase 7 hero image sourcing work.
+- Added backend hero image discovery from `og:image`, Twitter image meta tags, and `image_src` links for URL-generated recipes.
+- Added Flutter parsing and preservation of recipe `imageUrl` values from AI/server responses.
+- Added hero image previews on the recipe editor, home cards, favorites list, and recipe detail screen.
+- Verified Phase 7 with `python3 -B -m py_compile server/main.py server/hero_image_service.py`, a local `extract_hero_image` sample check, `flutter analyze --no-fatal-infos`, and `flutter test test/shopping_cart_test.dart`.

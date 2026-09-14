@@ -247,6 +247,10 @@ class GeminiService implements AIInterface {
     return Recipe(
       cloudId: const Uuid().v4(),
       name: aiData['name'] ?? 'Untitled Recipe',
+      url: _emptyToNull(aiData['url']?.toString()),
+      imageUrl: _emptyToNull(
+        (aiData['imageUrl'] ?? aiData['image_url'])?.toString(),
+      ),
       ingredients: ingredients,
       tools: tools,
       categoryKey: categoryKey,

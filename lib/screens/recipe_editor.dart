@@ -28,6 +28,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   final TextEditingController _tagsController = TextEditingController();
   final AIInterface _aiService = GeminiService();
   bool _isGenerating = false;
+  String? _imageUrl;
 
   late String randomQuote;
 
@@ -117,6 +118,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       _ingredientsController.text = _formatIngredients(recipe.ingredients);
       _toolsController.text = _formatTools(recipe.tools);
       _tagsController.text = recipe.tags.join(', ');
+      _imageUrl = recipe.imageUrl;
 
       // Store KEY directly - NO context.locale!
       selectedCategoryKey = recipe.categoryKey;
@@ -166,6 +168,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       );
       _toolsController.text = _formatTools(widget.recipe!.tools);
       _tagsController.text = widget.recipe!.tags.join(', ');
+      _imageUrl = widget.recipe!.imageUrl;
 
       // Store KEY - no context.locale!
       selectedCategoryKey = widget.recipe!.categoryKey;
@@ -404,6 +407,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     ),
                     const SizedBox(height: 24),
 
+                    _buildHeroImagePreview(),
+                    if (_imageUrl != null && _imageUrl!.isNotEmpty)
+                      const SizedBox(height: 24),
+
                     _buildTextField('${'name'.tr()}*', _nameController),
                     const SizedBox(height: 16),
 
@@ -611,7 +618,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                               url: _urlController.text.trim().isEmpty
                                   ? null
                                   : _urlController.text.trim(),
-                              imageUrl: widget.recipe?.imageUrl,
+                              imageUrl: _imageUrl,
                               ingredients: _parseIngredients(
                                 _ingredientsController.text,
                               ),
@@ -780,6 +787,31 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHeroImagePreview() {
+    final imageUrl = _imageUrl;
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(
+        imageUrl,
+        width: double.infinity,
+        height: 180,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            height: 96,
+            alignment: Alignment.center,
+            color: Colors.white,
+            child: const Icon(Icons.image_not_supported_outlined, size: 32),
+          );
+        },
+      ),
     );
   }
 
