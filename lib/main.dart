@@ -38,7 +38,6 @@ void main() async {
 
   await ThemeController.instance.load();
 
-  await NotificationService.initialize();
   print('MAIN: Running app...');
 
   runApp(
