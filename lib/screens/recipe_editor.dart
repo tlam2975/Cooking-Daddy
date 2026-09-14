@@ -556,14 +556,13 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                     child: Text(displayName),
                                   );
                                 }).toList(),
-                                onChanged: (String? newDisplayName) async {
+                                onChanged: (String? newDisplayName) {
                                   if (newDisplayName != null) {
                                     // Convert DISPLAY NAME → KEY
-                                    final key =
-                                        await CategoryData.getKeyFromDisplay(
-                                          newDisplayName,
-                                          context.locale.languageCode,
-                                        );
+                                    final key = CategoryData.getKeyFromDisplay(
+                                      newDisplayName,
+                                      context.locale.languageCode,
+                                    );
 
                                     setState(() {
                                       selectedCategoryKey = key;
