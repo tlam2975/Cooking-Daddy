@@ -69,3 +69,4 @@
 - 2026-09-14 18:40:47 +07 — Fixed Firestore sync tombstone handling so a newer remote delete cannot be accidentally pushed back from the stale local sync snapshot.
 - 2026-09-14 18:42:20 +07 — Removed the duplicate notification service initialization during app startup.
 - 2026-09-14 18:43:29 +07 — Removed an unnecessary async/await from the recipe editor category dropdown handler.
+- 2026-09-14 18:46:51 +07 — Ignored local Python setup files and removed the unnecessary `server/get-pip.py` bootstrap script from the workspace.

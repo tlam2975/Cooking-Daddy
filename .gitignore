@@ -50,4 +50,6 @@ app.*.map.json
 #Server files
 /server/.env
 /server/.venv
+/server/.python-version
+/server/get-pip.py
 /server/__pycache__/
