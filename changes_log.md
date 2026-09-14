@@ -70,3 +70,4 @@
 - 2026-09-14 18:42:20 +07 — Removed the duplicate notification service initialization during app startup.
 - 2026-09-14 18:43:29 +07 — Removed an unnecessary async/await from the recipe editor category dropdown handler.
 - 2026-09-14 18:46:51 +07 — Ignored local Python setup files and removed the unnecessary `server/get-pip.py` bootstrap script from the workspace.
+- 2026-09-14 21:15:18 +07 — Added English and Vietnamese translations for the new shopping, favorites, remix, energy note, portion, sync, and navigation UI text.

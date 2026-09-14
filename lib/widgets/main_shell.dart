@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/favorites_screen.dart';
@@ -58,35 +59,35 @@ class _MainShellState extends State<MainShell> {
               _NavItem(
                 icon: Icons.home_outlined,
                 activeIcon: Icons.home,
-                label: 'Trang chủ',
+                label: 'home'.tr(),
                 selected: _selectedIndex == 0,
                 onTap: () => setState(() => _selectedIndex = 0),
               ),
               _NavItem(
                 icon: Icons.menu_book_outlined,
                 activeIcon: Icons.menu_book,
-                label: 'Công thức',
+                label: 'recipes'.tr(),
                 selected: _selectedIndex == 1,
                 onTap: () => setState(() => _selectedIndex = 1),
               ),
               _NavItem(
                 icon: Icons.shopping_basket_outlined,
                 activeIcon: Icons.shopping_basket,
-                label: 'Đi chợ',
+                label: 'shopping'.tr(),
                 selected: _selectedIndex == 2,
                 onTap: () => setState(() => _selectedIndex = 2),
               ),
               _NavItem(
                 icon: Icons.favorite_border,
                 activeIcon: Icons.favorite,
-                label: 'Yêu thích',
+                label: 'favorites'.tr(),
                 selected: _selectedIndex == 3,
                 onTap: () => setState(() => _selectedIndex = 3),
               ),
               _NavItem(
                 icon: Icons.settings_outlined,
                 activeIcon: Icons.settings,
-                label: 'Cài đặt',
+                label: 'settings'.tr(),
                 selected: _selectedIndex == 4,
                 onTap: () => setState(() => _selectedIndex = 4),
               ),

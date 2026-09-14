@@ -614,8 +614,8 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                               IconButton(
                                                 tooltip: recipe.isFavorite
-                                                    ? 'Bỏ yêu thích'
-                                                    : 'Yêu thích',
+                                                    ? 'unfavorite'.tr()
+                                                    : 'favorite'.tr(),
                                                 onPressed: () =>
                                                     _toggleFavorite(recipe),
                                                 icon: Icon(

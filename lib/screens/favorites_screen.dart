@@ -57,12 +57,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Yêu thích', style: AppTextStyles.greeting),
+                Text('favorites'.tr(), style: AppTextStyles.greeting),
                 const SizedBox(height: 4),
                 Text(
                   recipes.isEmpty
-                      ? 'Chưa có công thức yêu thích'
-                      : '${recipes.length} công thức đã lưu',
+                      ? 'favorites_empty_short'.tr()
+                      : 'favorites_saved_count'.tr(
+                          namedArgs: {'count': recipes.length.toString()},
+                        ),
                   style: AppTextStyles.caption,
                 ),
               ],
@@ -109,7 +111,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             style: AppTextStyles.caption,
                           ),
                           trailing: IconButton(
-                            tooltip: 'Bỏ yêu thích',
+                            tooltip: 'unfavorite'.tr(),
                             onPressed: () => _toggleFavorite(recipe),
                             icon: Icon(
                               Icons.favorite,
@@ -151,10 +153,13 @@ class _EmptyFavorites extends StatelessWidget {
               child: Icon(Icons.favorite_border, color: AppColors.primary),
             ),
             const SizedBox(height: 16),
-            Text('Chưa có yêu thích', style: AppTextStyles.sectionTitle),
+            Text(
+              'favorites_empty_title'.tr(),
+              style: AppTextStyles.sectionTitle,
+            ),
             const SizedBox(height: 6),
             Text(
-              'Bấm trái tim trong công thức để lưu món bạn muốn nấu lại.',
+              'favorites_empty_message'.tr(),
               textAlign: TextAlign.center,
               style: AppTextStyles.caption,
             ),

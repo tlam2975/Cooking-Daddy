@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../data/repositories/auth_repository.dart';
@@ -76,7 +77,7 @@ class _SyncGateState extends State<_SyncGate> {
                 children: [
                   CircularProgressIndicator(color: AppColors.primary),
                   const SizedBox(height: 12),
-                  Text('Đang đồng bộ công thức...', style: AppTextStyles.body),
+                  Text('syncing_recipes'.tr(), style: AppTextStyles.body),
                 ],
               ),
             ),

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../services/shopping_cart.dart';
@@ -27,19 +28,23 @@ class ShoppingCartScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Đi chợ', style: AppTextStyles.greeting),
+                          Text('shopping'.tr(), style: AppTextStyles.greeting),
                           const SizedBox(height: 4),
                           Text(
                             items.isEmpty
-                                ? 'Chưa có nguyên liệu nào'
-                                : '${cart.uncheckedCount} món chưa mua',
+                                ? 'shopping_empty_short'.tr()
+                                : 'shopping_unchecked_count'.tr(
+                                    namedArgs: {
+                                      'count': cart.uncheckedCount.toString(),
+                                    },
+                                  ),
                             style: AppTextStyles.caption,
                           ),
                         ],
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Xóa giỏ',
+                      tooltip: 'clear_cart'.tr(),
                       onPressed: items.isEmpty ? null : cart.clear,
                       icon: const Icon(Icons.delete_outline),
                     ),
@@ -125,10 +130,13 @@ class _EmptyCart extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Giỏ đi chợ trống', style: AppTextStyles.sectionTitle),
+            Text(
+              'shopping_empty_title'.tr(),
+              style: AppTextStyles.sectionTitle,
+            ),
             const SizedBox(height: 6),
             Text(
-              'Mở một công thức và thêm nguyên liệu vào đây.',
+              'shopping_empty_message'.tr(),
               textAlign: TextAlign.center,
               style: AppTextStyles.caption,
             ),

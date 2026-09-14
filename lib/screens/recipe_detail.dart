@@ -119,20 +119,22 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Khẩu phần',
+                Text(
+                  'portions'.tr(),
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Công thức gốc: $basePortions',
+                  'base_portions'.tr(
+                    namedArgs: {'count': basePortions.toString()},
+                  ),
                   style: const TextStyle(fontSize: 12, color: Colors.black54),
                 ),
               ],
             ),
           ),
           IconButton(
-            tooltip: 'Giảm khẩu phần',
+            tooltip: 'decrease_portions'.tr(),
             onPressed: selectedPortions <= 1
                 ? null
                 : () => setState(() => selectedPortions -= 1),
@@ -147,7 +149,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             ),
           ),
           IconButton(
-            tooltip: 'Tăng khẩu phần',
+            tooltip: 'increase_portions'.tr(),
             onPressed: () => setState(() => selectedPortions += 1),
             icon: const Icon(Icons.add_circle_outline),
           ),
@@ -163,7 +165,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     ShoppingCart.instance.addRecipe(currentRecipe, selectedPortions);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Đã thêm nguyên liệu cho $selectedPortions khẩu phần'),
+        content: Text(
+          'added_ingredients_for_portions'.tr(
+            namedArgs: {'count': selectedPortions.toString()},
+          ),
+        ),
         backgroundColor: Colors.green,
       ),
     );
@@ -190,7 +196,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     final now = DateTime.now();
     final remix = Recipe(
       cloudId: const Uuid().v4(),
-      name: '${currentRecipe.name} Remix',
+      name: '${currentRecipe.name} ${'remix_suffix'.tr()}',
       url: currentRecipe.url,
       imageUrl: currentRecipe.imageUrl,
       ingredients: currentRecipe.ingredients
@@ -274,7 +280,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                 child: OutlinedButton.icon(
                   onPressed: _createRemix,
                   icon: const Icon(Icons.auto_fix_high),
-                  label: const Text('Remix'),
+                  label: Text('remix'.tr()),
                 ),
               ),
               const SizedBox(width: 12),
@@ -290,7 +296,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.bolt_outlined),
-                  label: const Text('Energy note'),
+                  label: Text('energy_note'.tr()),
                 ),
               ),
             ],
@@ -342,8 +348,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       bottom: 0,
                       child: IconButton(
                         tooltip: recipe!.isFavorite
-                            ? 'Bỏ yêu thích'
-                            : 'Yêu thích',
+                            ? 'unfavorite'.tr()
+                            : 'favorite'.tr(),
                         icon: Icon(
                           recipe!.isFavorite
                               ? Icons.favorite
@@ -714,7 +720,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                           child: OutlinedButton.icon(
                             onPressed: _addIngredientsToCart,
                             icon: const Icon(Icons.shopping_basket_outlined),
-                            label: const Text('Thêm vào giỏ'),
+                            label: Text('add_to_cart'.tr()),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.black,
                               padding: const EdgeInsets.symmetric(vertical: 18),

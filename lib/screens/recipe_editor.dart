@@ -420,7 +420,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     _buildTextField('tools'.tr(), _toolsController),
                     const SizedBox(height: 24),
 
-                    _buildTextField('Tags', _tagsController),
+                    _buildTextField('tags'.tr(), _tagsController),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
