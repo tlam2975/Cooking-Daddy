@@ -137,3 +137,17 @@ Transcript:
 """
     print(f"Prompt built: {prompt}")
     return prompt
+
+
+def build_energy_note_prompt(recipe):
+    return f"""Write a short, practical energy note for this recipe.
+
+Rules:
+- Return JSON only: {{"energyNote": "string"}}
+- Keep it under 45 words.
+- Do not invent exact calories or medical claims.
+- Mention what likely drives heaviness/lightness: protein, starch, fat, sugar, or portion size.
+
+Recipe:
+{recipe}
+"""

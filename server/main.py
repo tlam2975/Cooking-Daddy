@@ -6,7 +6,12 @@ from dotenv import load_dotenv
 from datetime import datetime
 from gemini_service import GeminiService
 from models import SmartGenerateRequest
-from prompts import build_prompt, build_smart_prompt, build_prompt_from_URL
+from prompts import (
+    build_energy_note_prompt,
+    build_prompt,
+    build_smart_prompt,
+    build_prompt_from_URL,
+)
 from youtube_service import get_youtube_transcript
 from service import SmartRecipeService
 from dashboard_service import DashboardService
@@ -284,6 +289,33 @@ def generate_from_url():
 @app.route('/api/debug/sample-recipe', methods=['GET'])
 def get_sample_recipe():
     return jsonify(sampleRecipe)
+
+@app.route('/api/energy-note', methods=['POST'])
+def energy_note():
+    data = request.get_json() or {}
+    prompt = build_energy_note_prompt(data)
+
+    try:
+        ai_text = gemini_service.generate(prompt)
+        cleaned = clean_json_response(ai_text)
+        parsed = json.loads(cleaned)
+        note = parsed.get('energyNote')
+        if note:
+            return jsonify({'success': True, 'energyNote': note})
+    except Exception as e:
+        print(f'Energy note fallback: {e}')
+
+    ingredients = data.get('ingredients') or []
+    tags = data.get('tags') or []
+    tag_text = f" Tags: {', '.join(tags)}." if tags else ""
+    return jsonify({
+        'success': True,
+        'energyNote': (
+            f"This recipe has {len(ingredients)} main ingredients. Portion size "
+            "and cooking fat will likely drive how heavy it feels, so pair it "
+            f"with vegetables or a lighter side if needed.{tag_text}"
+        )
+    })
 
 # ==================== RUN ====================
 

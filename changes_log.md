@@ -55,3 +55,8 @@
 - Added a Flutter dashboard service that fetches the endpoint, caches daily briefs under the signed-in user's Firestore document, and falls back locally when offline.
 - Added the daily brief image/tip card to the dashboard screen.
 - Verified Phase 5 with `python3 -B -m py_compile server/main.py server/dashboard_service.py`, `flutter analyze --no-fatal-infos`, and `curl http://127.0.0.1:2975/api/dashboard`.
+- Started Phase 6 remix and energy-note work.
+- Added a Flask `/api/energy-note` endpoint with Gemini-backed generation and a safe fallback note.
+- Added a Flutter energy note service with server call plus local fallback.
+- Added recipe detail actions for creating an editable remix clone and generating/saving an on-demand energy note.
+- Verified Phase 6 with `python3 -B -m py_compile server/main.py server/prompts.py`, `flutter analyze --no-fatal-infos`, `curl http://127.0.0.1:2975/api/energy-note`, and `flutter test test/shopping_cart_test.dart`.

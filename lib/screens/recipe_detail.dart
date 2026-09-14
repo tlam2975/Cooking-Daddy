@@ -1,8 +1,10 @@
 import 'package:cooking_daddy/data/models/quotes.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Step;
 import 'dart:math';
+import 'package:uuid/uuid.dart';
 import '../data/models/recipe.dart';
 import '../data/repositories/recipe_repository.dart';
+import '../services/energy_note_service.dart';
 import '../services/shopping_cart.dart';
 // import '../data/models/quotes.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -18,10 +20,12 @@ class RecipeDetailScreen extends StatefulWidget {
 
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   final RecipeRepository _repository = RecipeRepository();
+  final EnergyNoteService _energyNoteService = const EnergyNoteService();
 
   late String randomQuote;
   Recipe? recipe; // Nullable until loaded
   bool isLoading = true;
+  bool isGeneratingEnergyNote = false;
   //Controls Step showing status
   bool showSteps = false;
   int selectedPortions = 1;
@@ -179,6 +183,127 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     });
   }
 
+  Future<void> _createRemix() async {
+    final currentRecipe = recipe;
+    if (currentRecipe == null) return;
+
+    final now = DateTime.now();
+    final remix = Recipe(
+      cloudId: const Uuid().v4(),
+      name: '${currentRecipe.name} Remix',
+      url: currentRecipe.url,
+      imageUrl: currentRecipe.imageUrl,
+      ingredients: currentRecipe.ingredients
+          .map(
+            (ingredient) => Ingredient(
+              name: ingredient.name,
+              quantity: ingredient.quantity,
+              unit: ingredient.unit,
+              note: ingredient.note,
+            ),
+          )
+          .toList(),
+      tools: currentRecipe.tools
+          .map((tool) => Tool(name: tool.name, quantity: tool.quantity))
+          .toList(),
+      steps: currentRecipe.steps
+          .map(
+            (step) => Step(
+              instruction: step.instruction,
+              heat: step.heat,
+              index: step.index,
+              seasonings: step.seasonings,
+              timer: step.timer,
+              notes: step.notes,
+              whatToLookFor: step.whatToLookFor,
+            ),
+          )
+          .toList(),
+      categoryKey: currentRecipe.categoryKey,
+      tags: currentRecipe.tags,
+      createdDate: now,
+      updatedAt: now,
+      basePortions: currentRecipe.basePortions,
+      sourceRecipeId: currentRecipe.sourceRecipeId ?? currentRecipe.cloudId,
+    );
+
+    await _repository.addRecipe(remix);
+    if (!mounted) return;
+
+    await Navigator.pushReplacementNamed(
+      context,
+      '/recipeEditor',
+      arguments: remix,
+    );
+  }
+
+  Future<void> _generateEnergyNote() async {
+    final currentRecipe = recipe;
+    if (currentRecipe == null || isGeneratingEnergyNote) return;
+
+    setState(() => isGeneratingEnergyNote = true);
+    final note = await _energyNoteService.generate(currentRecipe);
+    currentRecipe.energyNote = note;
+    currentRecipe.updatedAt = DateTime.now();
+    await _repository.updateRecipe(currentRecipe);
+    if (!mounted) return;
+
+    setState(() {
+      recipe = currentRecipe;
+      isGeneratingEnergyNote = false;
+    });
+  }
+
+  Widget _buildRemixEnergyPanel() {
+    final energyNote = recipe?.energyNote;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFFA4A4), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _createRemix,
+                  icon: const Icon(Icons.auto_fix_high),
+                  label: const Text('Remix'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: isGeneratingEnergyNote
+                      ? null
+                      : _generateEnergyNote,
+                  icon: isGeneratingEnergyNote
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.bolt_outlined),
+                  label: const Text('Energy note'),
+                ),
+              ),
+            ],
+          ),
+          if (energyNote != null && energyNote.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(energyNote, style: const TextStyle(fontSize: 14, height: 1.4)),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -289,6 +414,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             const SizedBox(height: 24),
                           ],
                           _buildPortionSelector(),
+                          const SizedBox(height: 16),
+                          _buildRemixEnergyPanel(),
                           const SizedBox(height: 24),
 
                           // Ingredients Section
