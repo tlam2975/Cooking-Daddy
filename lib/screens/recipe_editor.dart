@@ -8,6 +8,7 @@ import '../services/ai_interface.dart';
 import '../services/gemini_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../data/models/list_categories.dart';
+import 'package:uuid/uuid.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
   final Recipe? recipe;
@@ -110,8 +111,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     setState(() {
       _nameController.text = recipe.name;
       _urlController.text = recipe.url ?? '';
-      _ingredientsController.text = recipe.ingredients;
-      _toolsController.text = recipe.tools;
+      _ingredientsController.text = _formatIngredients(recipe.ingredients);
+      _toolsController.text = _formatTools(recipe.tools);
 
       // Store KEY directly - NO context.locale!
       selectedCategoryKey = recipe.categoryKey;
@@ -156,8 +157,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       // Pre-fill basic fields
       _nameController.text = widget.recipe!.name;
       _urlController.text = widget.recipe!.url ?? '';
-      _ingredientsController.text = widget.recipe!.ingredients;
-      _toolsController.text = widget.recipe!.tools;
+      _ingredientsController.text = _formatIngredients(
+        widget.recipe!.ingredients,
+      );
+      _toolsController.text = _formatTools(widget.recipe!.tools);
 
       // Store KEY - no context.locale!
       selectedCategoryKey = widget.recipe!.categoryKey;
@@ -581,16 +584,28 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                             }
 
                             // Create recipe
+                            final now = DateTime.now();
                             final recipe = Recipe(
+                              cloudId:
+                                  widget.recipe?.cloudId ?? const Uuid().v4(),
                               name: _nameController.text.trim(),
                               url: _urlController.text.trim().isEmpty
                                   ? null
                                   : _urlController.text.trim(),
-                              ingredients: _ingredientsController.text.trim(),
-                              tools: _toolsController.text.trim(),
+                              imageUrl: widget.recipe?.imageUrl,
+                              ingredients: _parseIngredients(
+                                _ingredientsController.text,
+                              ),
+                              tools: _parseTools(_toolsController.text),
                               categoryKey: selectedCategoryKey!, // Use KEY
-                              createdDate:
-                                  widget.recipe?.createdDate ?? DateTime.now(),
+                              createdDate: widget.recipe?.createdDate ?? now,
+                              updatedAt: now,
+                              basePortions: widget.recipe?.basePortions ?? 1,
+                              isFavorite: widget.recipe?.isFavorite ?? false,
+                              isSeed: widget.recipe?.isSeed ?? false,
+                              sourceRecipeId: widget.recipe?.sourceRecipeId,
+                              energyNote: widget.recipe?.energyNote,
+                              tags: widget.recipe?.tags ?? const [],
                               steps: steps.map((stepData) {
                                 final timerMin =
                                     int.tryParse(
@@ -850,6 +865,89 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
         ),
       ],
     );
+  }
+
+  String _formatIngredients(List<Ingredient> ingredients) {
+    return ingredients
+        .map((ingredient) {
+          final parts = <String>[];
+          if (ingredient.quantity != null) {
+            final q = ingredient.quantity!;
+            parts.add(
+              q == q.roundToDouble() ? q.toInt().toString() : q.toString(),
+            );
+          }
+          if (ingredient.unit != null) parts.add(ingredient.unit!.name);
+          parts.add(ingredient.name);
+          final line = parts.join(' ').trim();
+          return ingredient.note != null && ingredient.note!.isNotEmpty
+              ? '$line (${ingredient.note})'
+              : line;
+        })
+        .join(', ');
+  }
+
+  String _formatTools(List<Tool> tools) {
+    return tools
+        .map((tool) {
+          if (tool.quantity != null && tool.quantity! > 1) {
+            return '${tool.quantity}x ${tool.name}';
+          }
+          return tool.name;
+        })
+        .join(', ');
+  }
+
+  List<Ingredient> _parseIngredients(String text) {
+    return text
+        .split(',')
+        .map((raw) => raw.trim())
+        .where((raw) => raw.isNotEmpty)
+        .map(_parseIngredient)
+        .toList();
+  }
+
+  Ingredient _parseIngredient(String raw) {
+    final match = RegExp(
+      r'^(\d+(?:\.\d+)?)\s*(g|kg|ml|l|tsp|tbsp|cup|pcs)\s+(.+)$',
+      caseSensitive: false,
+    ).firstMatch(raw);
+
+    if (match == null) return Ingredient(name: raw);
+
+    return Ingredient(
+      name: match.group(3)!.trim(),
+      quantity: double.tryParse(match.group(1)!),
+      unit: _parseUnit(match.group(2)),
+    );
+  }
+
+  List<Tool> _parseTools(String text) {
+    return text
+        .split(',')
+        .map((raw) => raw.trim())
+        .where((raw) => raw.isNotEmpty)
+        .map((raw) {
+          final match = RegExp(
+            r'^(\d+)x\s+(.+)$',
+            caseSensitive: false,
+          ).firstMatch(raw);
+          if (match == null) return Tool(name: raw, quantity: 1);
+          return Tool(
+            name: match.group(2)!.trim(),
+            quantity: int.tryParse(match.group(1)!),
+          );
+        })
+        .toList();
+  }
+
+  MeasurementUnit? _parseUnit(String? value) {
+    final unit = value?.trim().toLowerCase();
+    if (unit == null || unit.isEmpty) return null;
+    for (final candidate in MeasurementUnit.values) {
+      if (candidate.name == unit) return candidate;
+    }
+    return null;
   }
 }
 

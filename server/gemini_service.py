@@ -1,18 +1,17 @@
-from urllib import response
-
-from google import genai
-from google.genai import types
-
-
 class GeminiService:
     def __init__(self, api_keys, model="gemini-2.5-flash"):
-        if not api_keys:
-            raise ValueError("No API keys provided")
-
-        self.clients = [genai.Client(api_key=k) for k in api_keys]
         self.model = model
+        self.clients = []
+
+        if api_keys:
+            import google.genai as genai
+
+            self.clients = [genai.Client(api_key=k) for k in api_keys]
 
     def generate(self, prompt: str) -> str:
+        if not self.clients:
+            raise Exception("No Gemini API keys configured")
+
         last_error = None
 
         for i, client in enumerate(self.clients):

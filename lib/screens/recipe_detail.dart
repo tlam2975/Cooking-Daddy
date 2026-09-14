@@ -51,6 +51,25 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     });
   }
 
+  String _formatIngredient(Ingredient i) {
+    final parts = <String>[];
+    if (i.quantity != null) {
+      final q = i.quantity!;
+      parts.add(q == q.roundToDouble() ? q.toInt().toString() : q.toString());
+    }
+    if (i.unit != null) parts.add(i.unit!.name);
+    parts.add(i.name);
+    final line = parts.join(' ');
+    return (i.note != null && i.note!.isNotEmpty) ? '$line (${i.note})' : line;
+  }
+
+  String _formatTool(Tool t) {
+    if (t.quantity != null && t.quantity! > 1) {
+      return '${t.quantity}x ${t.name}';
+    }
+    return t.name;
+  }
+
   Widget _buildDetailChip(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -169,7 +188,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Text(
-                              recipe!.ingredients,
+                              recipe!.ingredients
+                                  .map(_formatIngredient)
+                                  .join('\n'),
                               style: const TextStyle(fontSize: 16, height: 1.5),
                             ),
                           ),
@@ -193,7 +214,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Text(
-                                recipe!.tools,
+                                recipe!.tools.map(_formatTool).join('\n'),
                                 style: const TextStyle(
                                   fontSize: 16,
                                   height: 1.5,

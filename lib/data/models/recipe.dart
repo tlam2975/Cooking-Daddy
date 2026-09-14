@@ -11,6 +11,7 @@ class Recipe {
 
   late String name;
   String? url;
+  String? imageUrl; // hero image, reference-only, URL stored not downloaded
 
   List<Ingredient> ingredients = [];
   List<Tool> tools = [];
@@ -19,29 +20,35 @@ class Recipe {
   @Index()
   late String categoryKey;
 
+  List<String> tags = []; // dashboard grouping, e.g. "quick", "healthy"
+
   late DateTime createdDate;
-  late DateTime updatedAt;
+  late DateTime updatedAt; // bump on ANY edit — drives sync delta
 
   int basePortions = 1;
   bool isFavorite = false;
   bool isSeed = false;
 
-  String? sourceRecipeId; // reserved for Phase 4 cloning
+  String? sourceRecipeId; // set when this recipe was created via Remix
+  String? energyNote; // free-text blurb, generated on-demand only
 
   Recipe({
     required this.cloudId,
     required this.name,
     this.url,
+    this.imageUrl,
     this.ingredients = const [],
     this.tools = const [],
     this.steps = const [],
     required this.categoryKey,
+    this.tags = const [],
     required this.createdDate,
     required this.updatedAt,
     this.basePortions = 1,
     this.isFavorite = false,
     this.isSeed = false,
     this.sourceRecipeId,
+    this.energyNote,
   });
 }
 
@@ -49,11 +56,16 @@ class Recipe {
 class Ingredient {
   String name = '';
   double? quantity;
-  String? unit;
+
+  @Enumerated(EnumType.name)
+  MeasurementUnit? unit; // enum — reliable scaling math for shopping cart
+
   String? note; // e.g. "chopped", "to taste"
 
   Ingredient({this.name = '', this.quantity, this.unit, this.note});
 }
+
+enum MeasurementUnit { g, kg, ml, l, tsp, tbsp, cup, pcs }
 
 @embedded
 class Tool {

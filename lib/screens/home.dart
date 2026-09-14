@@ -176,11 +176,31 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         filteredRecipes = recipes.where((recipe) {
           final searchQuery = _searchController.text.toLowerCase();
+          final ingredientText = recipe.ingredients
+              .map(
+                (ingredient) => [
+                  ingredient.name,
+                  ingredient.note,
+                  ingredient.unit?.name,
+                  ingredient.quantity?.toString(),
+                ].whereType<String>().join(' '),
+              )
+              .join(' ')
+              .toLowerCase();
+          final toolText = recipe.tools
+              .map(
+                (tool) => [
+                  tool.name,
+                  tool.quantity?.toString(),
+                ].whereType<String>().join(' '),
+              )
+              .join(' ')
+              .toLowerCase();
           final matchesSearch =
               searchQuery.isEmpty ||
               recipe.name.toLowerCase().contains(searchQuery) ||
-              (recipe.ingredients.toLowerCase().contains(searchQuery)) ||
-              (recipe.tools.toLowerCase().contains(searchQuery));
+              ingredientText.contains(searchQuery) ||
+              toolText.contains(searchQuery);
 
           final matchesCategory =
               selectedCategoryFilter == null ||

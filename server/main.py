@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 from datetime import datetime
 from gemini_service import GeminiService
 from models import SmartGenerateRequest
-from prompts import build_prompt_from_URL
-from test_youtube import get_youtube_transcript
+from prompts import build_prompt, build_smart_prompt, build_prompt_from_URL
+from youtube_service import get_youtube_transcript
 from service import SmartRecipeService
 
 # Load env
@@ -25,13 +25,23 @@ sampleRecipe = {
             "description": "scattered clouds",
             "feels_like": 35.04,
             "humidity": 70,
-            "is_raining": 'false',
+            "is_raining": False,
             "temperature": 30
         }
     },
     "recipe": {
-        "ingredients": "beef sirloin 250g, asparagus 200g, unsalted butter 40g, potato 400g, salt, black pepper, vegetable oil 20ml, garlic cloves 2",
+        "ingredients": [
+            {"name": "beef sirloin", "quantity": 250, "unit": "g"},
+            {"name": "asparagus", "quantity": 200, "unit": "g"},
+            {"name": "unsalted butter", "quantity": 40, "unit": "g"},
+            {"name": "potato", "quantity": 400, "unit": "g"},
+            {"name": "salt", "quantity": None, "unit": None},
+            {"name": "black pepper", "quantity": None, "unit": None},
+            {"name": "vegetable oil", "quantity": 20, "unit": "ml"},
+            {"name": "garlic cloves", "quantity": 2, "unit": "pcs"}
+        ],
         "name": "Pan-Seared Beef with Garlicky Asparagus and Crispy Potatoes",
+        "category": "dinner",
         "steps": [
             {
                 "instruction": "Wash and peel the potatoes, then slice them into 0.5 cm thick rounds or small cubes.",
@@ -67,9 +77,15 @@ sampleRecipe = {
                 "whatToLookFor": "Beef is juicy and tender after resting, and easy to slice."
             }
         ],
-        "tools": "pan, knife, cutting board, tongs, spatula"
+        "tools": [
+            {"name": "pan", "quantity": 1},
+            {"name": "knife", "quantity": 1},
+            {"name": "cutting board", "quantity": 1},
+            {"name": "tongs", "quantity": 1},
+            {"name": "spatula", "quantity": 1}
+        ]
     },
-    "success": "true"
+    "success": True
 }
 
 API_KEYS = [
@@ -93,87 +109,6 @@ CORS(app)
 MAX_DAILY_REQUESTS = 40
 request_count = 0
 
-# ==================== ORIGINAL PROMPTS (UNCHANGED) ====================
-
-def check_quota():
-    return request_count < MAX_DAILY_REQUESTS
-
-def increment_quota():
-    global request_count
-    request_count += 1
-
-def build_prompt(ingredients, tools=None, session_length='normal', difficulty='normal', dish=None):
-    tools_str = f", tools: {tools}" if tools else ""
-    dish_str = dish if dish else 'a meal'
-    
-    prompt = f"""Generate a recipe for {dish_str} using these ingredients: {ingredients}{tools_str}, session length: {session_length}, difficulty: {difficulty}.
-
-Please return in this very specific fields: name, ingredients, tools, steps[step(instruction(str), heat(str), time(int), seasoning(str), notes(str), whatToLookFor(str))].
-
-The fields name, steps(instruction, whatToLookFor) are required, the rest are optional.
-Timer is saved in seconds as int (3 minutes 20 seconds will be saved as 200).
-You don't have to use all the ingredients, but try not to add to many extra ingredients that are not in the list. If you do add extra ingredients, make sure they are common pantry items. Also suggest the ingredients that are common in Asia.
-Also note that the field "item" should return all items in a single string separated by comma, not a list. For example: "item1 40g, item2 2kg, item3 100g". Do not return it as a list.
-Please return the exact format as specified, and nothing else. Do not include any additional text or explanations. If notes, heat and timer are blank, then simply leave them out of that step. Make sure that all measurements are in metric units (grams, liters, centimeter etc.) and that the recipe is clear and easy to follow. Avoid using any non-standard formatting or markdown.
-The response should be in JSON format."""
-    print(f'Prompt built: {prompt}')  # Log the first 200 characters of the prompt for debugging
-
-    return prompt
-
-
-def build_smart_prompt(ingredients, tools, dish, session_length, difficulty, 
-                       weather, meal_time, current_hour):
-    tools_str = f", tools: {tools}" if tools else ""
-    dish_str = dish if dish else "a meal"
-    
-    prompt = f"""Generate a recipe for {dish_str} using ingredients: {ingredients}{tools_str}
-
-    Requirements:
-    - Session length: {session_length}
-    - Difficulty: {difficulty}
-    """
-    
-    prompt += f"\nTime Context:\n- Current time: {meal_time} ({current_hour}:00)\n"
-    
-    if meal_time == 'breakfast':
-        prompt += "- Suggest energizing breakfast foods\n"
-    elif meal_time == 'lunch':
-        prompt += "- Suggest moderate portions, balanced meal\n"
-    elif current_hour >= 20:
-        prompt += "- CRITICAL: Late night cooking\n"
-        prompt += "- Suggest QUICK recipes (max 15 minutes)\n"
-        prompt += "- Light portions, easy to digest\n"
-    elif meal_time == 'dinner':
-        prompt += "- Suggest hearty dinner portions\n"
-    
-    if weather:
-        temp = weather['temperature']
-        condition = weather['condition']
-        city = weather['city']
-        
-        prompt += f"\nWeather Context:\n- Location: {city}\n"
-        prompt += f"- Temperature: {temp}°C (feels like {weather['feels_like']}°C)\n"
-        prompt += f"- Condition: {condition}\n"
-        
-        if temp > 30:
-            prompt += "- VERY HOT: Suggest cold dishes\n"
-        elif temp < 15:
-            prompt += "- COOL: Warm dishes\n"
-    
-    prompt += """\nPlease return in this very specific fields: name, ingredients, tools, steps[step(instruction(str), heat(str), time(int), seasoning(str), notes(str), whatToLookFor(str))].
-
-The fields name, steps(instruction, whatToLookFor) are required, the rest are optional.
-Timer is saved in seconds as int (3 minutes 20 seconds will be saved as 200).
-You don't have to use all the ingredients, but try not to add to many extra ingredients that are not in the list. If you do add extra ingredients, make sure they are common pantry items. Also suggest the ingredients that are common in Asia.
-Also note that the field "item" should return all items in a single string separated by comma, not a list. For example: "item1 40g, item2 2kg, item3 100g". Do not return it as a list.
-Please return the exact format as specified, and nothing else. Do not include any additional text or explanations. If notes, heat and timer are blank, then simply leave them out of that step. Make sure that all measurements are in metric units (grams, liters, centimeter etc.) and that the recipe is clear and easy to follow. Avoid using any non-standard formatting or markdown.
-The response should be in JSON format. It must contain field 'success' with value 'true' if recipe is generated successfully, and 'false' if there is any issue with generating the recipe. If 'success' is 'false', then include an 'error' field with a brief error message. This is critical for the app to handle errors gracefully."""
-
-    print(f'Prompt built: {prompt}') 
-
-    return prompt
-
-
 # ==================== UTIL ====================
 
 def clean_json_response(text):
@@ -185,6 +120,11 @@ def clean_json_response(text):
     if text.endswith('```'):
         text = text[:-3]
     return text.strip()
+
+
+def is_gemini_error(parsed):
+    """True if Gemini returned {"error": "..."} instead of an actual recipe."""
+    return isinstance(parsed, dict) and 'error' in parsed and 'steps' not in parsed
 
 
 # ==================== ROUTES ====================
@@ -216,16 +156,18 @@ def generate():
         if request_count >= DAILY_LIMIT:
             return jsonify({
                 'error': 'Daily quota exceeded',
-                'success': 'false'}), 429
+                'success': False}), 429
         else:
-            request_count += 1
             ai_text = gemini_service.generate(prompt)
             cleaned = clean_json_response(ai_text)
             print(f'Generated recipe: \n{cleaned}')
             request_count += 1
+            parsed = json.loads(cleaned)
+            if is_gemini_error(parsed):
+                return jsonify({'success': False, 'error': parsed['error']}), 422
             return jsonify({
-                'success': 'true',
-                'recipe': json.loads(cleaned)
+                'success': True,
+                'recipe': parsed
             })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -272,16 +214,19 @@ def smart_generate():
         if request_count >= DAILY_LIMIT:
             return jsonify({
                 'error': 'Daily quota exceeded',
-                'success': 'false'}), 429
+                'success': False}), 429
         
         else:
             ai_text = gemini_service.generate(prompt)
             cleaned = clean_json_response(ai_text)
             request_count += 1
             print(f'Generated recipe: {cleaned}')
+            parsed = json.loads(cleaned)
+            if is_gemini_error(parsed):
+                return jsonify({'success': False, 'error': parsed['error']}), 422
             return jsonify({
-                'success': 'true',
-                'recipe': json.loads(cleaned),
+                'success': True,
+                'recipe': parsed,
                 'context': context
             })
     except Exception as e:
@@ -296,10 +241,10 @@ def generate_from_url():
         return jsonify({'error': 'URL is required'}), 400
 
     try:
-        # 1. Get transcript (your original function)
+        # 1. Get transcript
         transcript = get_youtube_transcript(url)
 
-        # 2. Build prompt (UNCHANGED)
+        # 2. Build prompt
         prompt = build_prompt_from_URL(transcript)
 
         print(f'\n📤 PROMPT SENT:\n{prompt}\n')
@@ -312,6 +257,9 @@ def generate_from_url():
         # 4. Clean + parse
         cleaned = clean_json_response(ai_text)
         recipe = json.loads(cleaned)
+
+        if is_gemini_error(recipe):
+            return jsonify({'success': False, 'error': recipe['error']}), 422
 
         return jsonify({
             'success': True,

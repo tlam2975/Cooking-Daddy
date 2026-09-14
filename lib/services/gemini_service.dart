@@ -4,6 +4,7 @@ import '../data/models/recipe.dart';
 import 'ai_interface.dart';
 import 'dart:async';
 import 'dart:io';
+import 'package:uuid/uuid.dart';
 
 class GeminiService implements AIInterface {
   final String baseUrl = 'http://localhost:2975';
@@ -59,12 +60,12 @@ class GeminiService implements AIInterface {
       print('🟢 Response status: ${response.statusCode}');
       print('🟢 Response body: ${response.body}');
 
-      if (response.body.contains('"success": true')) {
-        final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+
+      if (_isSuccess(data)) {
         print('Fetched data successfullly!');
 
-        if (response.body.contains('"success": true') &&
-            data['recipe'] != null) {
+        if (data['recipe'] != null) {
           final recipe = _convertToRecipe(data['recipe']);
           print('✅ Recipe converted: ${recipe.name}');
 
@@ -87,7 +88,6 @@ class GeminiService implements AIInterface {
         );
       } else {
         print(' Error status: ${response.statusCode}');
-        final data = jsonDecode(response.body);
         return AIGenerationResult(
           success: false,
           error: data['error'] ?? 'Generation failed',
@@ -137,7 +137,7 @@ class GeminiService implements AIInterface {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        if (data['success'] == true && data['recipe'] != null) {
+        if (_isSuccess(data) && data['recipe'] != null) {
           final recipe = _convertToRecipe(data['recipe']);
           print('✅ Recipe converted: ${recipe.name}');
 
@@ -218,27 +218,10 @@ class GeminiService implements AIInterface {
     print('🔵 Converting AI data to Recipe...');
     print('🔵 AI data keys: ${aiData.keys}');
 
-    // Handle ingredients (could be String, List, or Object)
-    String ingredients;
-    if (aiData['ingredients'] is Map) {
-      // Handle {"item": "beef, chicken..."}
-      final ingredientsMap = aiData['ingredients'] as Map;
-      ingredients = ingredientsMap['item'] ?? '';
-    } else if (aiData['ingredients'] is List) {
-      ingredients = (aiData['ingredients'] as List).join(', ');
-    } else {
-      ingredients = aiData['ingredients'] as String? ?? '';
-    }
+    final ingredients = _parseIngredients(aiData['ingredients']);
+    print('🔵 Converted ingredients: "${ingredients.length}"');
 
-    print('🔵 Converted ingredients: "$ingredients"');
-
-    // Convert tools
-    String tools;
-    if (aiData['tools'] is List) {
-      tools = (aiData['tools'] as List).join(', ');
-    } else {
-      tools = aiData['tools'] as String? ?? '';
-    }
+    final tools = _parseTools(aiData['tools']);
 
     // Map category
     final categoryKey = _mapCategory(aiData['category']);
@@ -259,14 +242,108 @@ class GeminiService implements AIInterface {
       );
     }).toList();
 
+    final now = DateTime.now();
     return Recipe(
+      cloudId: const Uuid().v4(),
       name: aiData['name'] ?? 'Untitled Recipe',
       ingredients: ingredients,
       tools: tools,
       categoryKey: categoryKey,
-      createdDate: DateTime.now(),
+      createdDate: now,
+      updatedAt: now,
       steps: steps,
     );
+  }
+
+  bool _isSuccess(Map<String, dynamic> data) {
+    return data['success'] == true || data['success'] == 'true';
+  }
+
+  List<Ingredient> _parseIngredients(dynamic value) {
+    if (value is Map) {
+      return _parseIngredients(value['item']);
+    }
+    if (value is List) {
+      return value
+          .map((item) {
+            if (item is Map) {
+              return Ingredient(
+                name: item['name']?.toString() ?? '',
+                quantity: _toDouble(item['quantity'] ?? item['amount']),
+                unit: _parseUnit(item['unit']),
+                note: _emptyToNull(item['note']?.toString()),
+              );
+            }
+            return Ingredient(name: item.toString());
+          })
+          .where((ingredient) => ingredient.name.trim().isNotEmpty)
+          .toList();
+    }
+    return _parseIngredientText(value?.toString() ?? '');
+  }
+
+  List<Tool> _parseTools(dynamic value) {
+    if (value is List) {
+      return value
+          .map((item) {
+            if (item is Map) {
+              return Tool(
+                name: item['name']?.toString() ?? '',
+                quantity: _toInt(item['quantity']),
+              );
+            }
+            return Tool(name: item.toString());
+          })
+          .where((tool) => tool.name.trim().isNotEmpty)
+          .toList();
+    }
+    return _parseToolText(value?.toString() ?? '');
+  }
+
+  List<Ingredient> _parseIngredientText(String text) {
+    return text
+        .split(',')
+        .map((raw) => raw.trim())
+        .where((raw) => raw.isNotEmpty)
+        .map((raw) => Ingredient(name: raw))
+        .toList();
+  }
+
+  List<Tool> _parseToolText(String text) {
+    return text
+        .split(',')
+        .map((raw) => raw.trim())
+        .where((raw) => raw.isNotEmpty)
+        .map((raw) => Tool(name: raw, quantity: 1))
+        .toList();
+  }
+
+  MeasurementUnit? _parseUnit(dynamic value) {
+    final unit = value?.toString().trim().toLowerCase();
+    if (unit == null || unit.isEmpty || unit == 'null') return null;
+
+    for (final candidate in MeasurementUnit.values) {
+      if (candidate.name == unit) return candidate;
+    }
+    return null;
+  }
+
+  double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
+  }
+
+  int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  String? _emptyToNull(String? value) {
+    if (value == null || value.trim().isEmpty || value == 'null') return null;
+    return value.trim();
   }
 
   String _mapCategory(String? aiCategory) {

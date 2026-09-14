@@ -3,6 +3,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/recipe.dart';
 import '../models/category.dart';
 import '../models/list_categories.dart';
+import 'package:uuid/uuid.dart';
 
 class IsarDatasource {
   static late Isar isar;
@@ -86,13 +87,28 @@ class IsarDatasource {
   }
 
   static Future<void> addDefaultRecipes() async {
+    const uuid = Uuid();
+    final now = DateTime.now();
+
     await isar.writeTxn(() async {
       final scrambledEggs = Recipe(
+        cloudId: uuid.v4(),
         name: 'Scrambled Eggs',
-        ingredients: '2 eggs, Salt, Pepper, Butter',
-        tools: 'Pan, Spatula, Bowl',
+        ingredients: [
+          Ingredient(name: 'eggs', quantity: 2, unit: MeasurementUnit.pcs),
+          Ingredient(name: 'salt'),
+          Ingredient(name: 'pepper'),
+          Ingredient(name: 'butter'),
+        ],
+        tools: [
+          Tool(name: 'Pan', quantity: 1),
+          Tool(name: 'Spatula', quantity: 1),
+          Tool(name: 'Bowl', quantity: 1),
+        ],
         categoryKey: 'breakfast',
-        createdDate: DateTime.now(),
+        createdDate: now,
+        updatedAt: now,
+        isSeed: true,
         steps: [
           Step(
             instruction: 'Crack eggs into bowl and whisk',
@@ -118,11 +134,23 @@ class IsarDatasource {
       await isar.recipes.put(scrambledEggs);
 
       final pasta = Recipe(
+        cloudId: uuid.v4(),
         name: 'Simple Pasta',
-        ingredients: '200g pasta, Salt, Olive oil, Garlic',
-        tools: 'Pot, Colander, Pan',
+        ingredients: [
+          Ingredient(name: 'pasta', quantity: 200, unit: MeasurementUnit.g),
+          Ingredient(name: 'salt'),
+          Ingredient(name: 'olive oil'),
+          Ingredient(name: 'garlic'),
+        ],
+        tools: [
+          Tool(name: 'Pot', quantity: 1),
+          Tool(name: 'Colander', quantity: 1),
+          Tool(name: 'Pan', quantity: 1),
+        ],
         categoryKey: 'dinner',
-        createdDate: DateTime.now(),
+        createdDate: now,
+        updatedAt: now,
+        isSeed: true,
         steps: [
           Step(
             instruction: 'Boil water with salt',
@@ -147,11 +175,21 @@ class IsarDatasource {
       await isar.recipes.put(pasta);
 
       final softboiledEgg = Recipe(
+        cloudId: uuid.v4(),
         name: 'Soft Boiled Egg',
-        ingredients: 'Egg, Water, Salt',
-        tools: 'Pot, Spoon',
+        ingredients: [
+          Ingredient(name: 'egg', quantity: 1, unit: MeasurementUnit.pcs),
+          Ingredient(name: 'water'),
+          Ingredient(name: 'salt'),
+        ],
+        tools: [
+          Tool(name: 'Pot', quantity: 1),
+          Tool(name: 'Spoon', quantity: 1),
+        ],
         categoryKey: 'lazy_meals',
-        createdDate: DateTime.now(),
+        createdDate: now,
+        updatedAt: now,
+        isSeed: true,
         steps: [
           Step(
             instruction: 'Boil the water',
