@@ -32,3 +32,8 @@
 - Added portion controls to recipe detail, scaled ingredient display, and an action to add scaled ingredients to the in-memory shopping cart.
 - Added focused tests for shopping cart portion scaling and item merging.
 - Verified Phase 1 with `flutter test test/shopping_cart_test.dart` and `flutter analyze --no-fatal-infos`.
+- Started Phase 2 favorites work.
+- Added favorite toggles on recipe cards and recipe detail.
+- Added the first real Favorites screen and wired the bottom-nav favorites tab plus `/favorites` route to it.
+- Removed the unused in-shell placeholder tab now that Shopping and Favorites are real screens.
+- Verified Phase 2 with `flutter analyze --no-fatal-infos`.

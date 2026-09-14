@@ -137,6 +137,13 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _toggleFavorite(Recipe recipe) async {
+    recipe.isFavorite = !recipe.isFavorite;
+    recipe.updatedAt = DateTime.now();
+    await _repository.updateRecipe(recipe);
+    await _loadRecipes();
+  }
+
   Future<void> _filterByCategory(String? categoryDisplay) async {
     if (categoryDisplay == null) {
       if (mounted) {
@@ -513,6 +520,7 @@ class _HomePageState extends State<HomePage> {
                                                       arguments: recipe.id,
                                                     );
                                                     _pickRandomQuote();
+                                                    _loadRecipes();
                                                   },
                                                   child: Column(
                                                     crossAxisAlignment:
@@ -539,6 +547,21 @@ class _HomePageState extends State<HomePage> {
                                                       ),
                                                     ],
                                                   ),
+                                                ),
+                                              ),
+                                              IconButton(
+                                                tooltip: recipe.isFavorite
+                                                    ? 'Bỏ yêu thích'
+                                                    : 'Yêu thích',
+                                                onPressed: () =>
+                                                    _toggleFavorite(recipe),
+                                                icon: Icon(
+                                                  recipe.isFavorite
+                                                      ? Icons.favorite
+                                                      : Icons.favorite_border,
+                                                  color: recipe.isFavorite
+                                                      ? const Color(0xFFFF6B6B)
+                                                      : Colors.black,
                                                 ),
                                               ),
                                               // Edit menu button

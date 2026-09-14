@@ -10,6 +10,7 @@ import 'screens/recipe_editor.dart';
 import 'screens/cooking_session.dart';
 import 'screens/recipe_detail.dart';
 import 'screens/settings.dart';
+import 'screens/favorites_screen.dart';
 import 'screens/shopping_cart_screen.dart';
 import 'screens/profile.dart';
 import 'screens/ai_features.dart';
@@ -92,12 +93,7 @@ class CookingDaddyApp extends StatelessWidget {
             // to them ahead of the actual feature being built.
             '/shopping': (context) =>
                 const Scaffold(body: ShoppingCartScreen()),
-            '/favorites': (context) => const ComingSoonScreen(
-              icon: Icons.favorite_border,
-              title: 'Yêu thích',
-              message: 'Tính năng công thức yêu thích đang được xây dựng.',
-              showAppBar: true,
-            ),
+            '/favorites': (context) => const Scaffold(body: FavoritesScreen()),
             '/video': (context) => const ComingSoonScreen(
               icon: Icons.play_circle_outline,
               title: 'Video',

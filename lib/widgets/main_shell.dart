@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../screens/dashboard_screen.dart';
+import '../screens/favorites_screen.dart';
 import '../screens/home.dart';
 import '../screens/settings.dart';
 import '../screens/shopping_cart_screen.dart';
@@ -32,11 +33,7 @@ class _MainShellState extends State<MainShell> {
       DashboardScreen(onSearchTapped: _goToRecipesTab),
       const HomePage(),
       const ShoppingCartScreen(),
-      const _ComingSoonTab(
-        icon: Icons.favorite_border,
-        title: 'Yêu thích',
-        message: 'Tính năng công thức yêu thích đang được xây dựng.',
-      ),
+      const FavoritesScreen(),
       const SettingsScreen(),
     ];
 
@@ -136,51 +133,6 @@ class _NavItem extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ComingSoonTab extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String message;
-
-  const _ComingSoonTab({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(icon, color: AppColors.primary, size: 28),
-              ),
-              const SizedBox(height: 16),
-              Text(title, style: AppTextStyles.sectionTitle),
-              const SizedBox(height: 6),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.caption,
-              ),
-            ],
-          ),
         ),
       ),
     );

@@ -165,6 +165,20 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     );
   }
 
+  Future<void> _toggleFavorite() async {
+    final currentRecipe = recipe;
+    if (currentRecipe == null) return;
+
+    currentRecipe.isFavorite = !currentRecipe.isFavorite;
+    currentRecipe.updatedAt = DateTime.now();
+    await _repository.updateRecipe(currentRecipe);
+    if (!mounted) return;
+
+    setState(() {
+      recipe = currentRecipe;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -196,6 +210,27 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
+                  if (recipe != null)
+                    Positioned(
+                      right: 16,
+                      top: 0,
+                      bottom: 0,
+                      child: IconButton(
+                        tooltip: recipe!.isFavorite
+                            ? 'Bỏ yêu thích'
+                            : 'Yêu thích',
+                        icon: Icon(
+                          recipe!.isFavorite
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          size: 32,
+                          color: recipe!.isFavorite
+                              ? const Color(0xFFFF6B6B)
+                              : Colors.black,
+                        ),
+                        onPressed: _toggleFavorite,
+                      ),
+                    ),
                   // Title
                   Center(
                     child: Column(
