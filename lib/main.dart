@@ -10,6 +10,7 @@ import 'screens/recipe_editor.dart';
 import 'screens/cooking_session.dart';
 import 'screens/recipe_detail.dart';
 import 'screens/settings.dart';
+import 'screens/shopping_cart_screen.dart';
 import 'screens/profile.dart';
 import 'screens/ai_features.dart';
 import 'services/notification.dart';
@@ -89,12 +90,8 @@ class CookingDaddyApp extends StatelessWidget {
             // Not built yet — these route to honest "coming soon" placeholders
             // rather than 404ing, so the app doesn't crash if something links
             // to them ahead of the actual feature being built.
-            '/shopping': (context) => const ComingSoonScreen(
-              icon: Icons.shopping_basket_outlined,
-              title: 'Đi chợ',
-              message: 'Tính năng đi chợ đang được xây dựng.',
-              showAppBar: true,
-            ),
+            '/shopping': (context) =>
+                const Scaffold(body: ShoppingCartScreen()),
             '/favorites': (context) => const ComingSoonScreen(
               icon: Icons.favorite_border,
               title: 'Yêu thích',

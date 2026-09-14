@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/home.dart';
 import '../screens/settings.dart';
+import '../screens/shopping_cart_screen.dart';
 import '../theme/app_theme.dart';
 
 /// Root shell with the 5-tab bottom nav from the reference mockup:
@@ -30,11 +31,7 @@ class _MainShellState extends State<MainShell> {
     final tabs = [
       DashboardScreen(onSearchTapped: _goToRecipesTab),
       const HomePage(),
-      const _ComingSoonTab(
-        icon: Icons.shopping_basket_outlined,
-        title: 'Đi chợ',
-        message: 'Tính năng đi chợ đang được xây dựng.',
-      ),
+      const ShoppingCartScreen(),
       const _ComingSoonTab(
         icon: Icons.favorite_border,
         title: 'Yêu thích',

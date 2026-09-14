@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import '../data/models/recipe.dart';
 import '../data/repositories/recipe_repository.dart';
+import '../services/shopping_cart.dart';
 // import '../data/models/quotes.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -23,6 +24,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   bool isLoading = true;
   //Controls Step showing status
   bool showSteps = false;
+  int selectedPortions = 1;
 
   @override
   void initState() {
@@ -47,20 +49,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
     setState(() {
       recipe = fetchedRecipe;
+      selectedPortions = fetchedRecipe?.basePortions ?? 1;
       isLoading = false;
     });
-  }
-
-  String _formatIngredient(Ingredient i) {
-    final parts = <String>[];
-    if (i.quantity != null) {
-      final q = i.quantity!;
-      parts.add(q == q.roundToDouble() ? q.toInt().toString() : q.toString());
-    }
-    if (i.unit != null) parts.add(i.unit!.name);
-    parts.add(i.name);
-    final line = parts.join(' ');
-    return (i.note != null && i.note!.isNotEmpty) ? '$line (${i.note})' : line;
   }
 
   String _formatTool(Tool t) {
@@ -88,6 +79,88 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
         ],
+      ),
+    );
+  }
+
+  List<ShoppingCartItem> _scaledIngredients() {
+    final currentRecipe = recipe;
+    if (currentRecipe == null) return [];
+
+    return currentRecipe.ingredients
+        .map(
+          (ingredient) => ShoppingCart.instance.scaleIngredient(
+            ingredient,
+            currentRecipe.basePortions,
+            selectedPortions,
+          ),
+        )
+        .toList();
+  }
+
+  Widget _buildPortionSelector() {
+    final basePortions = recipe?.basePortions ?? 1;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFFA4A4), width: 1),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Khẩu phần',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Công thức gốc: $basePortions',
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Giảm khẩu phần',
+            onPressed: selectedPortions <= 1
+                ? null
+                : () => setState(() => selectedPortions -= 1),
+            icon: const Icon(Icons.remove_circle_outline),
+          ),
+          SizedBox(
+            width: 44,
+            child: Text(
+              selectedPortions.toString(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Tăng khẩu phần',
+            onPressed: () => setState(() => selectedPortions += 1),
+            icon: const Icon(Icons.add_circle_outline),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addIngredientsToCart() {
+    final currentRecipe = recipe;
+    if (currentRecipe == null) return;
+
+    ShoppingCart.instance.addRecipe(currentRecipe, selectedPortions);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Đã thêm nguyên liệu cho $selectedPortions khẩu phần'),
+        backgroundColor: Colors.green,
       ),
     );
   }
@@ -170,6 +243,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 32),
+                          _buildPortionSelector(),
+                          const SizedBox(height: 24),
 
                           // Ingredients Section
                           Text(
@@ -188,8 +263,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Text(
-                              recipe!.ingredients
-                                  .map(_formatIngredient)
+                              _scaledIngredients()
+                                  .map(ShoppingCart.instance.formatItem)
                                   .join('\n'),
                               style: const TextStyle(fontSize: 16, height: 1.5),
                             ),
@@ -437,30 +512,55 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   top: false,
                   child: SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/cookingSession',
-                          arguments: recipe,
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB8E6F5),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _addIngredientsToCart,
+                            icon: const Icon(Icons.shopping_basket_outlined),
+                            label: const Text('Thêm vào giỏ'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              side: const BorderSide(
+                                color: Color(0xFFFFA4A4),
+                                width: 2,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
                         ),
-                        elevation: 2,
-                      ),
-                      child: Text(
-                        'start_cooking'.tr(),
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/cookingSession',
+                                arguments: recipe,
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFB8E6F5),
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 2,
+                            ),
+                            child: Text(
+                              'start_cooking'.tr(),
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),

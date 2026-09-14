@@ -23,3 +23,12 @@
 - Verified `/api/debug/sample-recipe` returns the structured recipe sample with list-based ingredients and tools.
 - Ran `flutter analyze`; Item 0 compile errors are gone, with remaining output limited to existing analyzer info/lint items.
 - Normalized server success responses to booleans and made the Dart client accept both boolean and legacy string success values.
+
+## 2026-09-14
+
+- Started Phase 1 work for portion scaling and the ephemeral shopping cart.
+- Added an in-memory `ShoppingCart` service with unit-aware quantity rounding and item merging.
+- Added the first real `ShoppingCartScreen` and wired the bottom-nav shopping tab plus `/shopping` route to it.
+- Added portion controls to recipe detail, scaled ingredient display, and an action to add scaled ingredients to the in-memory shopping cart.
+- Added focused tests for shopping cart portion scaling and item merging.
+- Verified Phase 1 with `flutter test test/shopping_cart_test.dart` and `flutter analyze --no-fatal-infos`.
