@@ -9,6 +9,7 @@ from models import SmartGenerateRequest
 from prompts import build_prompt, build_smart_prompt, build_prompt_from_URL
 from youtube_service import get_youtube_transcript
 from service import SmartRecipeService
+from dashboard_service import DashboardService
 
 # Load env
 load_dotenv()
@@ -103,6 +104,7 @@ WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
 
 gemini_service = GeminiService(API_KEYS)
 smart_service = SmartRecipeService(WEATHER_API_KEY)
+dashboard_service = DashboardService()
 
 app = Flask(__name__)
 CORS(app)
@@ -139,6 +141,11 @@ def get_quota():
         'remaining': max(0, MAX_DAILY_REQUESTS - request_count),
         'limit': MAX_DAILY_REQUESTS
     })
+
+@app.route('/api/dashboard', methods=['GET'])
+def dashboard():
+    day = request.args.get('date')
+    return jsonify(dashboard_service.get_daily_brief(day))
 
 @app.route('/api/generate-from-ingredients', methods=['POST'])
 def generate():

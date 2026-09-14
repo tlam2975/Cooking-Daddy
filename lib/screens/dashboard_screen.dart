@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/models/recipe.dart';
 import '../data/repositories/recipe_repository.dart';
+import '../services/dashboard_service.dart';
 import '../theme/app_theme.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -21,7 +22,9 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final RecipeRepository _repository = RecipeRepository();
+  final DashboardService _dashboardService = DashboardService();
   List<Recipe> _suggestions = [];
+  DashboardBrief? _brief;
   bool _loading = true;
 
   @override
@@ -32,12 +35,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadSuggestions() async {
     final recipes = await _repository.getAllRecipes();
+    final brief = await _dashboardService.getDailyBrief();
     if (!mounted) return;
     setState(() {
       // No "suggested for you" logic exists yet — just showing the most
       // recently added recipes as a stand-in until that's designed.
       _suggestions = recipes.take(4).toList()
         ..sort((a, b) => b.createdDate.compareTo(a.createdDate));
+      _brief = brief;
       _loading = false;
     });
   }
@@ -54,12 +59,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildHeader(),
             const SizedBox(height: 20),
             _buildSearchBar(context),
+            const SizedBox(height: 20),
+            _buildDailyBrief(),
             const SizedBox(height: 28),
             Text('todays_suggestion'.tr(), style: AppTextStyles.sectionTitle),
             const SizedBox(height: 12),
             _buildSuggestions(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDailyBrief() {
+    final brief = _brief;
+    if (brief == null) {
+      return Container(
+        height: 156,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Stack(
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 7,
+            child: Image.network(
+              brief.imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: AppColors.primaryLight,
+                child: Icon(
+                  Icons.image_not_supported,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.68)],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 14,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  brief.title,
+                  style: AppTextStyles.cardTitle.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  brief.tip,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption.copyWith(color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

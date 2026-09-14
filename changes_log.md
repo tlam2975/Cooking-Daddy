@@ -50,3 +50,8 @@
 - Updated the recipe repository to best-effort push add/update changes and write tombstones on delete when signed in.
 - Wired signed-in app startup through a one-shot recipe sync gate before showing the main shell.
 - Verified Phase 4 statically with `flutter analyze --no-fatal-infos` and regression-tested `flutter test test/shopping_cart_test.dart`; live Firebase sync still needs signed-in manual testing.
+- Started Phase 5 dashboard work.
+- Added a Flask `/api/dashboard` endpoint with daily cached kitchen tips and Unsplash image URLs.
+- Added a Flutter dashboard service that fetches the endpoint, caches daily briefs under the signed-in user's Firestore document, and falls back locally when offline.
+- Added the daily brief image/tip card to the dashboard screen.
+- Verified Phase 5 with `python3 -B -m py_compile server/main.py server/dashboard_service.py`, `flutter analyze --no-fatal-infos`, and `curl http://127.0.0.1:2975/api/dashboard`.
