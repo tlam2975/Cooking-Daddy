@@ -5,16 +5,9 @@ import '../services/dashboard_service.dart';
 import '../theme/app_theme.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-/// "Trang chủ" — the new landing tab from the redesign.
-/// Deliberately does NOT include the scoring/criteria stat cards from the
-/// reference mockup — those are Phase 6 (dashboard scoring) content and
-/// there's no real scoring logic to back them yet.
 class DashboardScreen extends StatefulWidget {
-  final VoidCallback? onSearchTapped; // must be nullable (VoidCallback?)
-  const DashboardScreen({
-    super.key,
-    this.onSearchTapped,
-  }); // must be optional (no "required")
+  final VoidCallback? onSearchTapped;
+  const DashboardScreen({super.key, this.onSearchTapped});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -38,8 +31,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final brief = await _dashboardService.getDailyBrief();
     if (!mounted) return;
     setState(() {
-      // No "suggested for you" logic exists yet — just showing the most
-      // recently added recipes as a stand-in until that's designed.
       _suggestions = recipes.take(4).toList()
         ..sort((a, b) => b.createdDate.compareTo(a.createdDate));
       _brief = brief;
@@ -54,12 +45,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onRefresh: _loadSuggestions,
         color: AppColors.primary,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
           children: [
             _buildHeader(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             _buildSearchBar(context),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             _buildDailyBrief(),
             const SizedBox(height: 28),
             Text('todays_suggestion'.tr(), style: AppTextStyles.sectionTitle),
@@ -78,25 +69,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         height: 156,
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadii.large,
           border: Border.all(color: AppColors.border),
         ),
       );
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadii.large,
       child: Stack(
         children: [
           AspectRatio(
-            aspectRatio: 16 / 7,
+            aspectRatio: 16 / 8,
             child: Image.network(
               brief.imageUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(
                 color: AppColors.primaryLight,
                 child: Icon(
-                  Icons.image_not_supported,
+                  Icons.image_not_supported_outlined,
                   color: AppColors.primary,
                 ),
               ),
@@ -143,11 +134,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Row(
       children: [
         Container(
-          width: 44,
-          height: 44,
+          width: 46,
+          height: 46,
           decoration: BoxDecoration(
             color: AppColors.primaryLight,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppRadii.medium,
           ),
           child: Icon(Icons.soup_kitchen_outlined, color: AppColors.primary),
         ),
@@ -173,14 +164,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildSearchBar(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadii.large,
       onTap: widget.onSearchTapped,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadii.large,
           border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.soft,
         ),
         child: Row(
           children: [
@@ -252,7 +244,7 @@ class _SuggestionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final stepCount = recipe.steps.length;
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: AppRadii.large,
       onTap: () {
         Navigator.pushNamed(context, '/recipeDetail', arguments: recipe.id);
       },
@@ -260,26 +252,13 @@ class _SuggestionCard extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadii.large,
           border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.soft,
         ),
         child: Row(
           children: [
-            // Placeholder for the recipe photo — no photo field exists on
-            // Recipe yet (that's Phase 3). Swap this for a real Image once
-            // that field lands.
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.ramen_dining_outlined,
-                color: AppColors.primary,
-              ),
-            ),
+            _RecipeThumb(imageUrl: recipe.imageUrl, size: 62),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -293,9 +272,35 @@ class _SuggestionCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    stepCount == 1 ? '$stepCount bước' : '$stepCount bước',
+                    '$stepCount ${'stepCounter'.tr()}',
                     style: AppTextStyles.caption,
                   ),
+                  if (recipe.tags.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: recipe.tags.take(2).map((tag) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: AppRadii.small,
+                          ),
+                          child: Text(
+                            tag,
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -303,6 +308,43 @@ class _SuggestionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RecipeThumb extends StatelessWidget {
+  final String? imageUrl;
+  final double size;
+
+  const _RecipeThumb({required this.imageUrl, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    final url = imageUrl;
+    if (url != null && url.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: AppRadii.medium,
+        child: Image.network(
+          url,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _fallback(),
+        ),
+      );
+    }
+    return _fallback();
+  }
+
+  Widget _fallback() {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight,
+        borderRadius: AppRadii.medium,
+      ),
+      child: Icon(Icons.ramen_dining_outlined, color: AppColors.primary),
     );
   }
 }

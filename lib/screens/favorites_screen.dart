@@ -79,55 +79,95 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     itemBuilder: (context, index) {
                       final recipe = recipes[index];
-                      return Material(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        child: ListTile(
-                          onTap: () => _openRecipe(recipe),
-                          leading:
-                              recipe.imageUrl != null &&
-                                  recipe.imageUrl!.isNotEmpty
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    recipe.imageUrl!,
-                                    width: 48,
-                                    height: 48,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(
-                                        Icons.image_not_supported_outlined,
-                                      );
-                                    },
-                                  ),
-                                )
-                              : null,
-                          title: Text(
-                            recipe.name,
-                            style: AppTextStyles.cardTitle,
+                      return InkWell(
+                        borderRadius: AppRadii.large,
+                        onTap: () => _openRecipe(recipe),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: AppRadii.large,
+                            border: Border.all(color: AppColors.border),
+                            boxShadow: AppShadows.soft,
                           ),
-                          subtitle: Text(
-                            '${CategoryData.getDisplayName(recipe.categoryKey, context.locale.languageCode)}, ${recipe.steps.length} ${'stepCounter'.tr()}',
-                            style: AppTextStyles.caption,
-                          ),
-                          trailing: IconButton(
-                            tooltip: 'unfavorite'.tr(),
-                            onPressed: () => _toggleFavorite(recipe),
-                            icon: Icon(
-                              Icons.favorite,
-                              color: AppColors.primary,
-                            ),
+                          child: Row(
+                            children: [
+                              _FavoriteThumb(imageUrl: recipe.imageUrl),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      recipe.name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTextStyles.cardTitle,
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      '${CategoryData.getDisplayName(recipe.categoryKey, context.locale.languageCode)}, ${recipe.steps.length} ${'stepCounter'.tr()}',
+                                      style: AppTextStyles.caption,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'unfavorite'.tr(),
+                                onPressed: () => _toggleFavorite(recipe),
+                                icon: Icon(
+                                  Icons.favorite,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       );
                     },
                     separatorBuilder: (context, index) =>
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                     itemCount: recipes.length,
                   ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FavoriteThumb extends StatelessWidget {
+  final String? imageUrl;
+
+  const _FavoriteThumb({required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final url = imageUrl;
+    if (url != null && url.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: AppRadii.medium,
+        child: Image.network(
+          url,
+          width: 64,
+          height: 64,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _fallback(),
+        ),
+      );
+    }
+    return _fallback();
+  }
+
+  Widget _fallback() {
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight,
+        borderRadius: AppRadii.medium,
+      ),
+      child: Icon(Icons.menu_book_outlined, color: AppColors.primary),
     );
   }
 }

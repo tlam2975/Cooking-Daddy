@@ -56,6 +56,26 @@ class AppTextStyles {
   );
 }
 
+class AppRadii {
+  AppRadii._();
+
+  static BorderRadius get small => BorderRadius.circular(8);
+  static BorderRadius get medium => BorderRadius.circular(12);
+  static BorderRadius get large => BorderRadius.circular(16);
+}
+
+class AppShadows {
+  AppShadows._();
+
+  static List<BoxShadow> get soft => [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.06),
+      blurRadius: 18,
+      offset: const Offset(0, 8),
+    ),
+  ];
+}
+
 class AppTheme {
   AppTheme._();
 

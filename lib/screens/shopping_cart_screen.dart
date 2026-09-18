@@ -16,6 +16,9 @@ class ShoppingCartScreen extends StatelessWidget {
         animation: cart,
         builder: (context, _) {
           final items = cart.items;
+          final totalCount = items.length;
+          final checkedCount = items.where((item) => item.isChecked).length;
+          final progress = totalCount == 0 ? 0.0 : checkedCount / totalCount;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,6 +54,50 @@ class ShoppingCartScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (items.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: AppRadii.large,
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: AppShadows.soft,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '$checkedCount / $totalCount',
+                                style: AppTextStyles.cardTitle,
+                              ),
+                            ),
+                            Text(
+                              '${(progress * 100).round()}%',
+                              style: AppTextStyles.caption,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: AppRadii.small,
+                          child: LinearProgressIndicator(
+                            minHeight: 8,
+                            value: progress,
+                            backgroundColor: AppColors.primaryLight,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.success,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               Expanded(
                 child: items.isEmpty
                     ? _EmptyCart()
@@ -71,26 +118,34 @@ class ShoppingCartScreen extends StatelessWidget {
                                 color: Colors.red.shade700,
                               ),
                             ),
-                            child: CheckboxListTile(
-                              value: item.isChecked,
-                              onChanged: (value) =>
-                                  cart.toggleItem(item, value ?? false),
-                              title: Text(
-                                cart.formatItem(item),
-                                style: AppTextStyles.body.copyWith(
-                                  decoration: item.isChecked
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                                  color: item.isChecked
-                                      ? AppColors.textSecondary
-                                      : AppColors.textPrimary,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: AppRadii.large,
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: CheckboxListTile(
+                                value: item.isChecked,
+                                onChanged: (value) =>
+                                    cart.toggleItem(item, value ?? false),
+                                title: Text(
+                                  cart.formatItem(item),
+                                  style: AppTextStyles.body.copyWith(
+                                    decoration: item.isChecked
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                    color: item.isChecked
+                                        ? AppColors.textSecondary
+                                        : AppColors.textPrimary,
+                                  ),
                                 ),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: AppRadii.large,
+                                ),
+                                activeColor: AppColors.success,
                               ),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              tileColor: AppColors.surface,
                             ),
                           );
                         },

@@ -7,13 +7,7 @@ import '../screens/settings.dart';
 import '../screens/shopping_cart_screen.dart';
 import '../theme/app_theme.dart';
 
-/// Root shell with the 5-tab bottom nav from the reference mockup:
-/// Trang chủ (Home) / Công thức (Recipes) / Đi chợ (Shopping) /
-/// Yêu thích (Favorites) / Cài đặt (Settings).
-///
-/// "Recipes" and "Settings" reuse the existing screens as-is (untouched
-/// today). "Shopping" and "Favorites" are stub placeholders — those
-/// features aren't built yet, so they say so rather than pretending.
+/// Root shell with the main app tabs.
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -50,10 +44,11 @@ class _MainShellState extends State<MainShell> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border)),
+        boxShadow: AppShadows.soft,
       ),
       child: SafeArea(
         child: SizedBox(
-          height: 64,
+          height: 70,
           child: Row(
             children: [
               _NavItem(
@@ -120,20 +115,34 @@ class _NavItem extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(selected ? activeIcon : icon, color: color, size: 24),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: color,
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              ),
+        borderRadius: AppRadii.medium,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.primaryLight : Colors.transparent,
+              borderRadius: AppRadii.medium,
             ),
-          ],
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(selected ? activeIcon : icon, color: color, size: 23),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption.copyWith(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
