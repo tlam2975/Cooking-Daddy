@@ -11,6 +11,7 @@ import 'package:easy_localization/easy_localization.dart';
 import '../data/models/list_categories.dart';
 import '../theme/app_theme.dart';
 import 'package:uuid/uuid.dart';
+import 'package:isar/isar.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
   final Recipe? recipe;
@@ -663,7 +664,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                               }).toList(),
                             );
 
-                            if (widget.recipe != null) {
+                            if (widget.recipe != null &&
+                                widget.recipe!.id != Isar.autoIncrement) {
                               // Update
                               recipe.id = widget.recipe!.id;
                               await _repository.updateRecipe(recipe);

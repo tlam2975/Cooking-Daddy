@@ -11,6 +11,11 @@ abstract class AIInterface {
   });
 
   Future<AIGenerationResult> generateFromUrl(String url);
+  Future<AIGenerationResult> remixRecipe({
+    required Recipe source,
+    required String instructions,
+    required String languageCode,
+  });
   Future<bool> checkHealth();
   Future<QuotaInfo?> getQuota();
 }

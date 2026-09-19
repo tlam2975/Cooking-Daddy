@@ -95,7 +95,7 @@ Backend lives in `server/` and runs locally on port `2975`.
 
 - `server/main.py`
   Flask routes:
-  `/health`, `/api/quota`, `/api/dashboard`, `/api/smart-generate`, `/api/generate-from-url`, `/api/energy-note`.
+  `/health`, `/api/quota`, `/api/dashboard`, `/api/smart-generate`, `/api/generate-from-url`, `/api/remix`, `/api/energy-note`.
 
 - `server/prompts.py`
   Prompt contracts for structured recipe JSON and energy notes.
@@ -116,6 +116,23 @@ Backend lives in `server/` and runs locally on port `2975`.
   YouTube transcript fetching for URL generation.
 
 ## How To Run
+
+### AI Remix
+
+Open a saved recipe, tap **Remix**, and describe a change or choose **Vegetarian**, **Quicker**, or **Surprise me**. Leaving the request empty asks AI for a creative variation. Tap **Suggest a remix** and review the generated ingredients and steps in the editor. **Done** saves a new recipe; backing out discards the draft.
+
+`RemixRecipeModal` calls `GeminiService.remixRecipe`, which posts the complete recipe, requested change, and app language to `/api/remix`. Flask builds the prompt in `prompts.py`, calls Gemini, and validates the response using `remix_service.py`. Errors stay in the modal so the request can be retried. Dismissing the modal ignores its eventual result, though the server may still finish the request and consume quota.
+
+The draft gets a new UUID, preserves the base portion count and original `sourceRecipeId`, and is not written to Isar or Firestore until saved. The original recipe stays unchanged. Original photos and energy notes are not copied because they may not describe the new dish. The server must be running with a working Gemini API key; restart it after backend changes if automatic reload is disabled.
+
+Focused checks (mocked AI, no quota consumed):
+
+```bash
+flutter test test/remix_service_test.dart test/remix_recipe_modal_test.dart
+python3 -m unittest discover -s server -p 'test_remix.py' -v
+```
+
+### Start The App
 
 From project root:
 
@@ -179,7 +196,9 @@ curl http://127.0.0.1:2975/api/dashboard
 - Add ingredients to shopping cart.
 - Check/uncheck and remove shopping items.
 - Generate an energy note.
-- Tap Remix and confirm it opens an editable cloned recipe.
+- Tap Remix, choose a suggestion or describe a change, then tap Suggest a remix.
+- Confirm AI changes both ingredients and steps and opens the result in the editor.
+- Cancel the editor and confirm no recipe was saved; generate again and tap Done to save a separate recipe.
 - Start a cooking session.
 - Test Firestore sync by signing in and reopening the app.
 

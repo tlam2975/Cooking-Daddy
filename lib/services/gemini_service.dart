@@ -9,6 +9,104 @@ import 'package:uuid/uuid.dart';
 
 class GeminiService implements AIInterface {
   final String baseUrl = 'http://localhost:2975';
+  final http.Client? _client;
+
+  GeminiService({http.Client? client}) : _client = client;
+
+  @override
+  Future<AIGenerationResult> remixRecipe({
+    required Recipe source,
+    required String instructions,
+    required String languageCode,
+  }) async {
+    try {
+      final response = await (_client?.post ?? http.post)(
+        Uri.parse('$baseUrl/api/remix'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'instructions': instructions.trim(),
+          'language': languageCode,
+          'recipe': {
+            'name': source.name,
+            'category': source.categoryKey,
+            'tags': source.tags,
+            'basePortions': source.basePortions,
+            'ingredients': source.ingredients
+                .map(
+                  (item) => {
+                    'name': item.name,
+                    'quantity': item.quantity,
+                    'unit': item.unit?.name,
+                    'note': item.note,
+                  },
+                )
+                .toList(),
+            'tools': source.tools
+                .map((item) => {'name': item.name, 'quantity': item.quantity})
+                .toList(),
+            'steps': source.steps
+                .map(
+                  (step) => {
+                    'instruction': step.instruction,
+                    'heat': step.heat,
+                    'seasoning': step.seasonings,
+                    'time': step.timer,
+                    'notes': step.notes,
+                    'whatToLookFor': step.whatToLookFor,
+                  },
+                )
+                .toList(),
+          },
+        }),
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 429) {
+        return AIGenerationResult(success: false, error: 'remix_quota_error');
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode != 200 ||
+          !_isSuccess(data) ||
+          data['recipe'] is! Map) {
+        return AIGenerationResult(
+          success: false,
+          error: 'remix_generation_error',
+        );
+      }
+      final remix = _convertToRecipe(data['recipe']);
+      if (remix.name.trim().isEmpty ||
+          remix.ingredients.isEmpty ||
+          remix.steps.isEmpty ||
+          remix.steps.any((step) => step.instruction.trim().isEmpty)) {
+        return AIGenerationResult(
+          success: false,
+          error: 'remix_generation_error',
+        );
+      }
+      remix.basePortions = source.basePortions;
+      remix.sourceRecipeId = source.sourceRecipeId ?? source.cloudId;
+      // The original photo and energy note may no longer describe this variation.
+      remix.url = null;
+      remix.imageUrl = null;
+      return AIGenerationResult(success: true, recipe: remix);
+    } on TimeoutException {
+      return AIGenerationResult(success: false, error: 'remix_timeout_error');
+    } on SocketException {
+      return AIGenerationResult(
+        success: false,
+        error: 'remix_connection_error',
+      );
+    } on http.ClientException {
+      return AIGenerationResult(
+        success: false,
+        error: 'remix_connection_error',
+      );
+    } catch (_) {
+      return AIGenerationResult(
+        success: false,
+        error: 'remix_generation_error',
+      );
+    }
+  }
 
   @override
   Future<AIGenerationResult> generateFromIngredients({

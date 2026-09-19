@@ -1,12 +1,12 @@
 import 'package:cooking_daddy/data/models/quotes.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'dart:math';
-import 'package:uuid/uuid.dart';
 import '../data/models/recipe.dart';
 import '../data/repositories/recipe_repository.dart';
 import '../services/energy_note_service.dart';
 import '../services/shopping_cart.dart';
 import '../theme/app_theme.dart';
+import '../widgets/remix_recipe_modal.dart';
 // import '../data/models/quotes.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -197,54 +197,15 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     final currentRecipe = recipe;
     if (currentRecipe == null) return;
 
-    final now = DateTime.now();
-    final remix = Recipe(
-      cloudId: const Uuid().v4(),
-      name: '${currentRecipe.name} ${'remix_suffix'.tr()}',
-      url: currentRecipe.url,
-      imageUrl: currentRecipe.imageUrl,
-      ingredients: currentRecipe.ingredients
-          .map(
-            (ingredient) => Ingredient(
-              name: ingredient.name,
-              quantity: ingredient.quantity,
-              unit: ingredient.unit,
-              note: ingredient.note,
-            ),
-          )
-          .toList(),
-      tools: currentRecipe.tools
-          .map((tool) => Tool(name: tool.name, quantity: tool.quantity))
-          .toList(),
-      steps: currentRecipe.steps
-          .map(
-            (step) => Step(
-              instruction: step.instruction,
-              heat: step.heat,
-              index: step.index,
-              seasonings: step.seasonings,
-              timer: step.timer,
-              notes: step.notes,
-              whatToLookFor: step.whatToLookFor,
-            ),
-          )
-          .toList(),
-      categoryKey: currentRecipe.categoryKey,
-      tags: currentRecipe.tags,
-      createdDate: now,
-      updatedAt: now,
-      basePortions: currentRecipe.basePortions,
-      sourceRecipeId: currentRecipe.sourceRecipeId ?? currentRecipe.cloudId,
+    final remix = await showModalBottomSheet<Recipe>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.surface,
+      builder: (_) => RemixRecipeModal(source: currentRecipe),
     );
-
-    await _repository.addRecipe(remix);
-    if (!mounted) return;
-
-    await Navigator.pushReplacementNamed(
-      context,
-      '/recipeEditor',
-      arguments: remix,
-    );
+    if (!mounted || remix == null) return;
+    await Navigator.pushNamed(context, '/recipeEditor', arguments: remix);
   }
 
   Future<void> _generateEnergyNote() async {

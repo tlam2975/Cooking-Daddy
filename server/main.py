@@ -8,6 +8,7 @@ from gemini_service import GeminiService
 from models import SmartGenerateRequest
 from prompts import (
     build_energy_note_prompt,
+    build_remix_prompt,
     build_prompt,
     build_smart_prompt,
     build_prompt_from_URL,
@@ -16,6 +17,7 @@ from youtube_service import get_youtube_transcript
 from service import SmartRecipeService
 from dashboard_service import DashboardService
 from hero_image_service import find_hero_image
+from remix_service import valid_recipe
 
 # Load env
 load_dotenv()
@@ -295,6 +297,37 @@ def generate_from_url():
 @app.route('/api/debug/sample-recipe', methods=['GET'])
 def get_sample_recipe():
     return jsonify(sampleRecipe)
+
+@app.route('/api/remix', methods=['POST'])
+def remix_recipe():
+    global request_count
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not valid_recipe(data.get('recipe')):
+        return jsonify(success=False, error='A complete source recipe is required'), 400
+    instructions = data.get('instructions', '')
+    language = data.get('language', 'en')
+    portions = data['recipe'].get('basePortions', 1)
+    if not isinstance(instructions, str) or len(instructions) > 1000:
+        return jsonify(success=False, error='Instructions must be at most 1000 characters'), 400
+    if language not in ('en', 'vi') or type(portions) is not int or portions < 1:
+        return jsonify(success=False, error='Invalid language or portion count'), 400
+    if request_count >= DAILY_LIMIT:
+        return jsonify(success=False, error='Daily quota exceeded'), 429
+
+    try:
+        prompt = build_remix_prompt(data['recipe'], instructions.strip(), language)
+        ai_text = gemini_service.generate(prompt)
+        request_count += 1
+        recipe = json.loads(clean_json_response(ai_text))
+        if not valid_recipe(recipe):
+            return jsonify(success=False, error='AI did not return a complete recipe'), 422
+        return jsonify(success=True, recipe=recipe)
+    except (ValueError, TypeError):
+        return jsonify(success=False, error='AI returned an invalid recipe'), 422
+    except Exception:
+        app.logger.exception('Recipe remix failed')
+        return jsonify(success=False, error='Recipe generation is unavailable'), 503
+
 
 @app.route('/api/energy-note', methods=['POST'])
 def energy_note():
