@@ -72,3 +72,4 @@
 - 2026-09-14 18:46:51 +07 — Ignored local Python setup files and removed the unnecessary `server/get-pip.py` bootstrap script from the workspace.
 - 2026-09-14 21:15:18 +07 — Added English and Vietnamese translations for the new shopping, favorites, remix, energy note, portion, sync, and navigation UI text.
 - 2026-09-18 07:43:08 +07 — Started the UI polish pass, added shared UI tokens, refreshed dashboard, recipes, recipe detail, shopping, and favorites surfaces, and added `APP_WALKTHROUGH.md` for project onboarding.
+- 2026-09-19 07:10:42 +07 — Synced the shell navbar, recipe detail, recipe editor, and cooking session with the dynamic app theme, normalized recipe detail typography, and made favorite toggles update optimistically before background persistence.

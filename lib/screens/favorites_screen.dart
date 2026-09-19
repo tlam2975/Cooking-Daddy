@@ -35,10 +35,21 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Future<void> _toggleFavorite(Recipe recipe) async {
+    final wasFavorite = recipe.isFavorite;
     recipe.isFavorite = !recipe.isFavorite;
     recipe.updatedAt = DateTime.now();
-    await _repository.updateRecipe(recipe);
-    await _loadFavorites();
+    setState(() {
+      recipes = recipes.where((item) => item.id != recipe.id).toList();
+    });
+
+    try {
+      await _repository.updateRecipe(recipe);
+    } catch (_) {
+      if (!mounted) return;
+      recipe.isFavorite = wasFavorite;
+      recipe.updatedAt = DateTime.now();
+      await _loadFavorites();
+    }
   }
 
   Future<void> _openRecipe(Recipe recipe) async {

@@ -9,6 +9,7 @@ import '../services/ai_interface.dart';
 import '../services/gemini_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../data/models/list_categories.dart';
+import '../theme/app_theme.dart';
 import 'package:uuid/uuid.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
@@ -198,12 +199,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentFont = context.locale.languageCode == 'vi'
-        ? 'DarleySans'
-        : 'Caveat';
-
     return Scaffold(
-      backgroundColor: const Color(0xFFFFEAEA),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         bottom: false,
         left: false,
@@ -213,7 +210,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
             // Header
             Container(
               width: double.infinity,
-              color: const Color(0xFFFFA4A4),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                border: Border(bottom: BorderSide(color: AppColors.border)),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Stack(
                 children: [
@@ -222,11 +222,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     top: 0,
                     bottom: 0,
                     child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        size: 32,
-                        color: Colors.black,
-                      ),
+                      icon: const Icon(Icons.arrow_back, size: 32),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
@@ -235,17 +231,17 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                       children: [
                         Text(
                           'add_recipe'.tr(),
-                          style: TextStyle(
-                            fontSize: 40,
-                            fontWeight: FontWeight.w500,
-                            color: const Color.fromARGB(255, 255, 230, 0),
-                            letterSpacing: 2,
+                          style: AppTextStyles.greeting.copyWith(
+                            fontSize: 30,
+                            color: AppColors.primary,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           randomQuote,
-                          style: TextStyle(fontSize: 20, color: Colors.black),
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -263,20 +259,19 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     // URL Field
                     Row(
                       children: [
-                        const Text(
+                        Text(
                           'URL:',
-                          style: TextStyle(
+                          style: AppTextStyles.sectionTitle.copyWith(
                             fontSize: 24,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Container(
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               border: Border(
                                 bottom: BorderSide(
-                                  color: Colors.black,
+                                  color: AppColors.border,
                                   width: 2,
                                 ),
                               ),
@@ -373,8 +368,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                 }
                               },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
+                          backgroundColor: AppColors.primaryLight,
+                          foregroundColor: AppColors.primary,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 32,
                             vertical: 12,
@@ -392,7 +387,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                     height: 16,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: Colors.black,
+                                      color: AppColors.primary,
                                     ),
                                   ),
                                   SizedBox(width: 8),
@@ -401,7 +396,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                               )
                             : Text(
                                 'generate_with_ai'.tr(),
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                style: AppTextStyles.cardTitle.copyWith(
+                                  color: AppColors.primary,
+                                ),
                               ),
                       ),
                     ),
@@ -448,16 +445,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
             // Sticky Bottom Bar
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFFFEAEA),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 16,
-                    offset: const Offset(0, -4),
-                    spreadRadius: 2,
-                  ),
-                ],
+                color: AppColors.surface,
+                border: Border(top: BorderSide(color: AppColors.border)),
+                boxShadow: AppShadows.soft,
               ),
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
               child: SafeArea(
@@ -472,8 +462,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                         ElevatedButton(
                           onPressed: _addStep,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
+                            backgroundColor: AppColors.primaryLight,
+                            foregroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 24,
                               vertical: 12,
@@ -485,7 +475,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                           ),
                           child: Text(
                             'add_step'.tr(),
-                            style: const TextStyle(fontSize: 16),
+                            style: AppTextStyles.cardTitle.copyWith(
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
 
@@ -496,15 +488,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                            color: AppColors.surface,
+                            borderRadius: AppRadii.medium,
+                            border: Border.all(color: AppColors.border),
                           ),
                           child: FutureBuilder<List<String>>(
                             future: _loadCategories(),
@@ -539,16 +525,17 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                 value: selectedDisplay,
                                 hint: Text(
                                   'category'.tr(),
-                                  style: const TextStyle(
+                                  style: AppTextStyles.cardTitle.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 underline: const SizedBox(),
-                                icon: const Icon(Icons.arrow_drop_down),
-                                style: TextStyle(
-                                  color: Colors.black,
+                                icon: Icon(
+                                  Icons.arrow_drop_down,
+                                  color: AppColors.textPrimary,
+                                ),
+                                style: AppTextStyles.body.copyWith(
                                   fontSize: 16,
-                                  fontFamily: currentFont,
                                 ),
                                 items: categoryDisplayNames.map((displayName) {
                                   return DropdownMenuItem<String>(
@@ -720,8 +707,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFB8E6F5),
-                          foregroundColor: Colors.black,
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
@@ -730,9 +717,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                         ),
                         child: Text(
                           'done'.tr(),
-                          style: TextStyle(
+                          style: AppTextStyles.cardTitle.copyWith(
+                            color: Colors.white,
                             fontSize: 18,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -760,7 +747,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                   children: [
                     TextSpan(
                       text: '$label:',
-                      style: const TextStyle(fontSize: 18, color: Colors.black),
+                      style: AppTextStyles.body.copyWith(
+                        fontSize: 18,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     const TextSpan(
                       text: ' *',
@@ -769,12 +759,14 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                   ],
                 ),
               )
-            : Text('$label:', style: const TextStyle(fontSize: 18)),
+            : Text('$label:', style: AppTextStyles.body.copyWith(fontSize: 18)),
         const SizedBox(width: 16),
         Expanded(
           child: Container(
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.black, width: 2)),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppColors.border, width: 2),
+              ),
             ),
             child: TextField(
               controller: controller,
@@ -806,8 +798,12 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
           return Container(
             height: 96,
             alignment: Alignment.center,
-            color: Colors.white,
-            child: const Icon(Icons.image_not_supported_outlined, size: 32),
+            color: AppColors.surface,
+            child: Icon(
+              Icons.image_not_supported_outlined,
+              size: 32,
+              color: AppColors.textSecondary,
+            ),
           );
         },
       ),
@@ -819,8 +815,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface,
+        borderRadius: AppRadii.large,
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -830,13 +828,14 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
             children: [
               Text(
                 '${'step'.tr()} ${index + 1}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTextStyles.sectionTitle.copyWith(fontSize: 20),
               ),
               IconButton(
-                icon: const Icon(Icons.remove_circle, size: 32),
+                icon: Icon(
+                  Icons.remove_circle,
+                  size: 32,
+                  color: AppColors.primary,
+                ),
                 onPressed: () => _removeStep(index),
               ),
             ],
@@ -853,7 +852,10 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              Text('timer'.tr(), style: TextStyle(fontSize: 16)),
+              Text(
+                'timer'.tr(),
+                style: AppTextStyles.body.copyWith(fontSize: 16),
+              ),
               const SizedBox(width: 16),
               SizedBox(
                 width: 60,
@@ -868,7 +870,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                   ),
                 ),
               ),
-              const Text(' / ', style: TextStyle(fontSize: 20)),
+              Text(' / ', style: AppTextStyles.body.copyWith(fontSize: 20)),
               SizedBox(
                 width: 60,
                 child: TextField(
@@ -897,12 +899,17 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       children: [
         SizedBox(
           width: 140,
-          child: Text('$label:', style: const TextStyle(fontSize: 16)),
+          child: Text(
+            '$label:',
+            style: AppTextStyles.body.copyWith(fontSize: 16),
+          ),
         ),
         Expanded(
           child: Container(
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.black, width: 1)),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppColors.border, width: 1),
+              ),
             ),
             child: TextField(
               controller: controller,

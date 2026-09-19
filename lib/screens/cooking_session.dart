@@ -6,6 +6,7 @@ import '../data/models/recipe.dart';
 import '../data/models/quotes.dart';
 import 'package:flutter/services.dart';
 import '../services/timer.dart';
+import '../theme/app_theme.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
 
 class CookingSessionScreen extends StatefulWidget {
@@ -208,7 +209,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
             : widget.recipe.steps[currentStepIndex];
 
         return Scaffold(
-          backgroundColor: const Color(0xFFFFEAEA),
+          backgroundColor: AppColors.background,
           body: SafeArea(
             bottom: false,
             left: false,
@@ -218,7 +219,10 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                 // Header
                 Container(
                   width: double.infinity,
-                  color: const Color(0xFFFFA4A4),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    border: Border(bottom: BorderSide(color: AppColors.border)),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Stack(
                     children: [
@@ -228,10 +232,10 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                         top: 0,
                         bottom: 0,
                         child: IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.arrow_back,
                             size: 32,
-                            color: Colors.black,
+                            color: AppColors.textPrimary,
                           ),
                           onPressed: () {
                             stopTimer();
@@ -243,20 +247,18 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                       Center(
                         child: Column(
                           children: [
-                            const Text(
+                            Text(
                               'Cooking Daddy',
-                              style: TextStyle(
-                                fontSize: 40,
-                                color: Color.fromARGB(255, 255, 230, 0),
+                              style: AppTextStyles.greeting.copyWith(
+                                fontSize: 30,
+                                color: AppColors.primary,
                               ),
                             ),
                             Text(
                               randomQuote,
-                              style: TextStyle(
-                                fontSize: 20,
+                              style: AppTextStyles.body.copyWith(
                                 fontWeight: FontWeight.w500,
-                                color: Colors.black,
-                                letterSpacing: 2,
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -349,10 +351,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                 // Footer
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text(
-                    'copyright'.tr(),
-                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
-                  ),
+                  child: Text('copyright'.tr(), style: AppTextStyles.caption),
                 ),
               ],
             ),
@@ -375,7 +374,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
           // Recipe Name
           Text(
             widget.recipe.name,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            style: AppTextStyles.greeting.copyWith(fontSize: 30),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
@@ -385,12 +384,14 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
+              color: AppColors.surface,
+              borderRadius: AppRadii.large,
+              border: Border.all(color: AppColors.border),
+              boxShadow: AppShadows.soft,
             ),
             child: Text(
               step.instruction,
-              style: const TextStyle(fontSize: 20, height: 1.5),
+              style: AppTextStyles.body.copyWith(fontSize: 18, height: 1.5),
               textAlign: TextAlign.center,
             ),
           ),
@@ -402,27 +403,21 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFFFA4A4), width: 1),
+                color: AppColors.surface,
+                borderRadius: AppRadii.large,
+                border: Border.all(color: AppColors.border, width: 1),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.local_fire_department, color: Colors.red),
+                  Icon(Icons.local_fire_department, color: AppColors.primary),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'heat'.tr(),
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
+                      Text('heat'.tr(), style: AppTextStyles.caption),
                       Text(
                         step.heat!,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: AppTextStyles.cardTitle.copyWith(fontSize: 18),
                       ),
                     ],
                   ),
@@ -438,27 +433,21 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFFFA4A4), width: 1),
+                color: AppColors.surface,
+                borderRadius: AppRadii.large,
+                border: Border.all(color: AppColors.border, width: 1),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.restaurant, color: Colors.brown),
+                  Icon(Icons.restaurant, color: AppColors.primary),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'seasonings'.tr(),
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
+                      Text('seasonings'.tr(), style: AppTextStyles.caption),
                       Text(
                         step.seasonings!,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: AppTextStyles.cardTitle.copyWith(fontSize: 18),
                       ),
                     ],
                   ),
@@ -472,23 +461,21 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
           if (hasTimer) ...[
             Text(
               'timer'.tr(),
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: AppTextStyles.sectionTitle.copyWith(fontSize: 24),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                color: AppColors.surface,
+                borderRadius: AppRadii.large,
+                border: Border.all(color: AppColors.border),
               ),
               child: Text(
                 _timerService.isRunning
                     ? formatTime(_timerService.remainingSeconds)
                     : formatTime(step.timer!),
-                style: const TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTextStyles.greeting.copyWith(fontSize: 48),
               ),
             ),
             const SizedBox(height: 16),
@@ -496,8 +483,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
               ElevatedButton(
                 onPressed: () => startTimer(step.timer!),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFA4A4),
-                  foregroundColor: Colors.black,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
                     vertical: 12,
@@ -512,8 +499,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
               ElevatedButton(
                 onPressed: stopTimer,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[300],
-                  foregroundColor: Colors.black,
+                  backgroundColor: Colors.red[400],
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
                     vertical: 12,
@@ -533,26 +520,23 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF9E6),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFFFE082), width: 1),
+                color: AppColors.primaryLight,
+                borderRadius: AppRadii.large,
+                border: Border.all(color: AppColors.border, width: 1),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.visibility, color: Color(0xFFFFA726)),
+                  Icon(Icons.visibility, color: AppColors.primary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'until_it_is'.tr(),
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
+                        Text('until_it_is'.tr(), style: AppTextStyles.caption),
                         Text(
                           step.whatToLookFor,
-                          style: const TextStyle(fontSize: 16, height: 1.4),
+                          style: AppTextStyles.body.copyWith(height: 1.4),
                         ),
                       ],
                     ),
@@ -569,25 +553,23 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFE3F2FD),
-                borderRadius: BorderRadius.circular(16),
+                color: AppColors.surface,
+                borderRadius: AppRadii.large,
+                border: Border.all(color: AppColors.border),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.note, color: Color(0xFF42A5F5)),
+                  Icon(Icons.note, color: AppColors.primary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'notes'.tr(),
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
+                        Text('notes'.tr(), style: AppTextStyles.caption),
                         Text(
                           step.notes!,
-                          style: const TextStyle(fontSize: 16, height: 1.4),
+                          style: AppTextStyles.body.copyWith(height: 1.4),
                         ),
                       ],
                     ),
@@ -604,8 +586,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
             child: ElevatedButton(
               onPressed: nextStep,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFB8E6F5),
-                foregroundColor: Colors.black,
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
@@ -614,7 +596,10 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
               ),
               child: Text(
                 'done'.tr(),
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: AppTextStyles.cardTitle.copyWith(
+                  color: Colors.white,
+                  fontSize: 22,
+                ),
               ),
             ),
           ),
@@ -633,24 +618,19 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
             const SizedBox(height: 40),
             Text(
               'congratulations'.tr(),
-              style: TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 0, 0, 0),
-              ),
+              style: AppTextStyles.greeting.copyWith(fontSize: 48),
               textAlign: TextAlign.center,
             ),
             Text(
               'you_have_made'.tr(),
-              style: TextStyle(fontSize: 24),
+              style: AppTextStyles.body.copyWith(fontSize: 24),
               textAlign: TextAlign.center,
             ),
             Text(
               widget.recipe.name,
-              style: const TextStyle(
+              style: AppTextStyles.greeting.copyWith(
                 fontSize: 60,
-                fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 255, 58, 58),
+                color: AppColors.primary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -661,8 +641,8 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                 onPressed: () =>
                     Navigator.popUntil(context, (route) => route.isFirst),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFB8E6F5),
-                  foregroundColor: Colors.black,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -671,7 +651,10 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                 ),
                 child: Text(
                   'back_to_home'.tr(),
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.cardTitle.copyWith(
+                    color: Colors.white,
+                    fontSize: 22,
+                  ),
                 ),
               ),
             ),

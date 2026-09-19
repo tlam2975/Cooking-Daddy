@@ -6,6 +6,7 @@ import '../screens/home.dart';
 import '../screens/settings.dart';
 import '../screens/shopping_cart_screen.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_controller.dart';
 
 /// Root shell with the main app tabs.
 class MainShell extends StatefulWidget {
@@ -32,10 +33,15 @@ class _MainShellState extends State<MainShell> {
       const SettingsScreen(),
     ];
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: IndexedStack(index: _selectedIndex, children: tabs),
-      bottomNavigationBar: _buildNavBar(),
+    return AnimatedBuilder(
+      animation: ThemeController.instance,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: IndexedStack(index: _selectedIndex, children: tabs),
+          bottomNavigationBar: _buildNavBar(),
+        );
+      },
     );
   }
 

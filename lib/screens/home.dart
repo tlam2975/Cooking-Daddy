@@ -126,10 +126,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _toggleFavorite(Recipe recipe) async {
+    final wasFavorite = recipe.isFavorite;
     recipe.isFavorite = !recipe.isFavorite;
     recipe.updatedAt = DateTime.now();
-    await _repository.updateRecipe(recipe);
-    await _loadRecipes();
+    _filterRecipes();
+
+    try {
+      await _repository.updateRecipe(recipe);
+    } catch (_) {
+      if (!mounted) return;
+      recipe.isFavorite = wasFavorite;
+      recipe.updatedAt = DateTime.now();
+      _filterRecipes();
+    }
   }
 
   Future<void> _filterByCategory(String? categoryDisplay) async {

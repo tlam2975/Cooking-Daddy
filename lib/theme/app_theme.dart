@@ -83,11 +83,15 @@ class AppTheme {
     final base = GoogleFonts.beVietnamProTextTheme();
     return ThemeData(
       useMaterial3: true,
+      fontFamily: GoogleFonts.beVietnamPro().fontFamily,
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
+        secondary: AppColors.primary,
         surface: AppColors.surface,
+        onPrimary: Colors.white,
+        onSurface: AppColors.textPrimary,
       ),
       textTheme: base.apply(
         bodyColor: AppColors.textPrimary,
@@ -109,6 +113,49 @@ class AppTheme {
           ),
           textStyle: AppTextStyles.cardTitle.copyWith(color: Colors.white),
         ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: BorderSide(color: AppColors.border),
+          shape: RoundedRectangleBorder(borderRadius: AppRadii.small),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(foregroundColor: AppColors.textPrimary),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.surface,
+        indicatorColor: AppColors.primaryLight,
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? AppColors.primary
+                : AppColors.textSecondary,
+          ),
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => AppTextStyles.caption.copyWith(
+            color: states.contains(WidgetState.selected)
+                ? AppColors.primary
+                : AppColors.textSecondary,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w400,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: AppColors.primary, width: 2),
+        ),
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: AppColors.border),
+        ),
+        labelStyle: AppTextStyles.caption,
       ),
     );
   }

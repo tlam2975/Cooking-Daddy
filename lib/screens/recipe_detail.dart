@@ -140,7 +140,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             child: Text(
               selectedPortions.toString(),
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: AppTextStyles.cardTitle.copyWith(fontSize: 20),
             ),
           ),
           IconButton(
@@ -174,14 +174,23 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     final currentRecipe = recipe;
     if (currentRecipe == null) return;
 
+    final wasFavorite = currentRecipe.isFavorite;
     currentRecipe.isFavorite = !currentRecipe.isFavorite;
     currentRecipe.updatedAt = DateTime.now();
-    await _repository.updateRecipe(currentRecipe);
-    if (!mounted) return;
-
     setState(() {
       recipe = currentRecipe;
     });
+
+    try {
+      await _repository.updateRecipe(currentRecipe);
+    } catch (_) {
+      if (!mounted) return;
+      currentRecipe.isFavorite = wasFavorite;
+      currentRecipe.updatedAt = DateTime.now();
+      setState(() {
+        recipe = currentRecipe;
+      });
+    }
   }
 
   Future<void> _createRemix() async {
