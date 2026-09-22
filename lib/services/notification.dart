@@ -5,6 +5,9 @@ import 'package:timezone/data/latest.dart' as tz;
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
+  static bool _timerPermissionRequested = false;
+
+  static bool get timerPermissionRequested => _timerPermissionRequested;
 
   static Future<void> initialize() async {
     tz.initializeTimeZones();
@@ -13,9 +16,9 @@ class NotificationService {
     );
 
     const initializationSettingsIOS = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
     const initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
@@ -23,6 +26,30 @@ class NotificationService {
     );
 
     await _notifications.initialize(initializationSettings);
+  }
+
+  static Future<bool> requestTimerPermissions() async {
+    _timerPermissionRequested = true;
+
+    final iosGranted = await _notifications
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+
+    final macosGranted = await _notifications
+        .resolvePlatformSpecificImplementation<
+          MacOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+
+    final androidGranted = await _notifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.requestNotificationsPermission();
+
+    return iosGranted ?? macosGranted ?? androidGranted ?? true;
   }
 
   static Future<void> scheduleTimerNotification({

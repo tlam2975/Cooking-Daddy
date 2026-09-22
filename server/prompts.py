@@ -69,6 +69,7 @@ def build_smart_prompt(
     weather,
     meal_time,
     current_hour,
+    language='en',
 ):
     tools_str = f", tools: {tools}" if tools else ""
     dish_str = dish if dish else "a meal"
@@ -78,6 +79,7 @@ def build_smart_prompt(
 Requirements:
 - Session length: {session_length}
 - Difficulty: {difficulty}
+- Write the recipe text in {'Vietnamese' if language == 'vi' else 'English'}; keep category, tags, and unit codes in English.
 
 Time Context:
 - Current time: {meal_time} ({current_hour}:00)

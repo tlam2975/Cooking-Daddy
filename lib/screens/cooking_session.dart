@@ -4,7 +4,10 @@ import 'dart:math';
 import 'dart:async';
 import '../data/models/recipe.dart';
 import '../data/models/quotes.dart';
+import '../data/repositories/recipe_repository.dart';
 import 'package:flutter/services.dart';
+import '../services/app_navigation_controller.dart';
+import '../services/notification.dart';
 import '../services/timer.dart';
 import '../theme/app_theme.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
@@ -22,6 +25,9 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
   late String randomQuote;
   int currentStepIndex = 0;
   final TimerService _timerService = TimerService();
+  final RecipeRepository _repository = RecipeRepository();
+  bool _completionRecorded = false;
+  bool? _timerNotificationsEnabled;
 
   // Proximity sensor variables
   StreamSubscription<int>? _proximitySubscription;
@@ -55,6 +61,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
   @override
   void dispose() {
     _timerService.removeListener(_onTimerUpdate);
+    _timerService.dispose();
     _proximitySubscription?.cancel();
     _holdTimer?.cancel();
     _delayTimer?.cancel();
@@ -74,19 +81,68 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
     }
   }
 
-  void startTimer(int totalSeconds) {
+  Future<void> startTimer(int totalSeconds) async {
     print('Starting timer for $totalSeconds seconds');
 
     // Deactivate proximity while timer is running
     _deactivateProximity();
     _delayTimer?.cancel();
 
-    _timerService.startTimer(
+    final scheduleNotification = await _confirmTimerNotifications();
+    if (!mounted) return;
+
+    await _timerService.startTimer(
       seconds: totalSeconds,
       recipeName: widget.recipe.name,
       stepNumber: currentStepIndex + 1,
+      scheduleNotification: scheduleNotification,
     );
     print('Timer service is running: ${_timerService.isRunning}');
+  }
+
+  Future<bool> _confirmTimerNotifications() async {
+    if (_timerNotificationsEnabled != null) return _timerNotificationsEnabled!;
+    if (NotificationService.timerPermissionRequested) {
+      _timerNotificationsEnabled = true;
+      return true;
+    }
+
+    final shouldRequest = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('timer_notifications_title'.tr()),
+        content: Text('timer_notifications_message'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('not_now'.tr()),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('enable_notifications'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldRequest != true) {
+      _timerNotificationsEnabled = false;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('timer_notifications_skipped'.tr())),
+        );
+      }
+      return false;
+    }
+
+    final granted = await NotificationService.requestTimerPermissions();
+    _timerNotificationsEnabled = granted;
+    if (!granted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('timer_notifications_denied'.tr())),
+      );
+    }
+    return granted;
   }
 
   void stopTimer() {
@@ -177,23 +233,37 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
     _deactivateProximity();
     _delayTimer?.cancel();
 
+    int? nextTimerSeconds;
+    var shouldStartDelayedProximity = false;
+
     setState(() {
       if (currentStepIndex < widget.recipe.steps.length - 1) {
         currentStepIndex++;
 
-        // Auto-start timer if next step has one
         final nextStep = widget.recipe.steps[currentStepIndex];
         if (nextStep.timer != null && nextStep.timer! > 0) {
-          startTimer(nextStep.timer!);
+          nextTimerSeconds = nextStep.timer!;
         } else {
-          // No timer - start 10-second delay
-          _startDelayedProximity();
+          shouldStartDelayedProximity = true;
         }
       } else {
         // Move to completion screen
         currentStepIndex = widget.recipe.steps.length;
+        _recordCompletion();
       }
     });
+
+    if (nextTimerSeconds != null) {
+      startTimer(nextTimerSeconds!);
+    } else if (shouldStartDelayedProximity) {
+      _startDelayedProximity();
+    }
+  }
+
+  Future<void> _recordCompletion() async {
+    if (_completionRecorded) return;
+    _completionRecorded = true;
+    await _repository.recordCooked(widget.recipe);
   }
 
   // ==================== BUILD ====================
@@ -609,58 +679,84 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
   }
 
   Widget _buildCompletionScreen() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const SizedBox(height: 40),
-            Text(
-              'congratulations'.tr(),
-              style: AppTextStyles.greeting.copyWith(fontSize: 48),
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              'you_have_made'.tr(),
-              style: AppTextStyles.body.copyWith(fontSize: 24),
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              widget.recipe.name,
-              style: AppTextStyles.greeting.copyWith(
-                fontSize: 60,
-                color: AppColors.primary,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final titleSize = min(42.0, max(28.0, width * 0.11));
+        final recipeSize = min(44.0, max(28.0, width * 0.12));
+
+        return Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: max(0, constraints.maxHeight - 48),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 60),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () =>
-                    Navigator.popUntil(context, (route) => route.isFirst),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'congratulations'.tr(),
+                      maxLines: 1,
+                      softWrap: false,
+                      style: AppTextStyles.greeting.copyWith(
+                        fontSize: titleSize,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                  elevation: 2,
-                ),
-                child: Text(
-                  'back_to_home'.tr(),
-                  style: AppTextStyles.cardTitle.copyWith(
-                    color: Colors.white,
-                    fontSize: 22,
+                  const SizedBox(height: 10),
+                  Text(
+                    'you_have_made'.tr(),
+                    style: AppTextStyles.body.copyWith(fontSize: 22),
+                    textAlign: TextAlign.center,
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.recipe.name,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.greeting.copyWith(
+                      fontSize: recipeSize,
+                      height: 1.08,
+                      color: AppColors.primary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 48),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        AppNavigationController.instance.selectDashboard();
+                        Navigator.popUntil(context, (route) => route.isFirst);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Text(
+                        'back_to_home'.tr(),
+                        style: AppTextStyles.cardTitle.copyWith(
+                          color: Colors.white,
+                          fontSize: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

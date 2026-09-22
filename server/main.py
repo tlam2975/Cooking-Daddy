@@ -4,7 +4,8 @@ import os
 import json
 from dotenv import load_dotenv
 from datetime import datetime
-from gemini_service import GeminiService
+from gemini_service import GeminiService, GeminiConfigurationError, GeminiRequestError
+from recipe_schema import RecipeOutput
 from models import SmartGenerateRequest
 from prompts import (
     build_energy_note_prompt,
@@ -104,9 +105,10 @@ API_KEYS = [
     os.getenv('GEMINI_API_KEY_3'),
     # os.getenv('GEMINI_API_KEY_4'),
 ]
-DAILY_LIMIT = len(API_KEYS) * 10
-
 API_KEYS = [k for k in API_KEYS if k]
+if not API_KEYS:
+    API_KEYS = [key for key in [os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')] if key]
+DAILY_LIMIT = len(API_KEYS) * 10
 
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
 
@@ -136,6 +138,38 @@ def clean_json_response(text):
 def is_gemini_error(parsed):
     """True if Gemini returned {"error": "..."} instead of an actual recipe."""
     return isinstance(parsed, dict) and 'error' in parsed and 'steps' not in parsed
+
+
+def generate_recipe_response(prompt, context=None):
+    """Smart generation and Remix share the Gemini schema and response contract."""
+    global request_count
+    if not gemini_service.clients:
+        return jsonify(success=False, error=gemini_service.configuration_error,
+                       error_code='ai_not_configured'), 503
+    if request_count >= DAILY_LIMIT:
+        return jsonify(success=False, error='Daily quota exceeded',
+                       error_code='ai_quota_error'), 429
+    try:
+        text = gemini_service.generate(prompt, response_schema=RecipeOutput.model_json_schema())
+        request_count += 1
+        recipe = RecipeOutput.model_validate_json(clean_json_response(text)).model_dump()
+        payload = {'success': True, 'recipe': recipe,
+                   'remaining_quota': max(0, DAILY_LIMIT - request_count)}
+        if context is not None:
+            payload['context'] = context
+        return jsonify(payload)
+    except GeminiConfigurationError as error:
+        return jsonify(success=False, error=str(error), error_code='ai_not_configured'), 503
+    except ValueError:
+        return jsonify(success=False, error='AI returned an invalid recipe',
+                       error_code='ai_invalid_recipe'), 422
+    except GeminiRequestError as error:
+        code = 'ai_quota_error' if error.status_code == 429 else 'ai_generation_error'
+        return jsonify(success=False, error=str(error), error_code=code), (429 if error.status_code == 429 else 503)
+    except Exception:
+        app.logger.exception('Recipe generation failed')
+        return jsonify(success=False, error='Recipe generation is unavailable',
+                       error_code='ai_generation_error'), 503
 
 
 # ==================== ROUTES ====================
@@ -191,9 +225,8 @@ def generate():
 
 @app.route('/api/smart-generate', methods=['POST'])
 def smart_generate():
-    global request_count
     try:
-        req = SmartGenerateRequest(request.get_json())
+        req = SmartGenerateRequest(request.get_json(silent=True))
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
 
@@ -207,46 +240,12 @@ def smart_generate():
         req.difficulty,
         context["weather"],
         context["meal_time"],
-        context["hour"]
+        context["hour"],
+        req.language,
 
     )
 
-    print('🔵 ===== PROMPT DEBUG =====')
-    print(f'🔵 Prompt type: {type(prompt)}')
-    print(f'🔵 Prompt is None: {prompt is None}')
-    print(f'🔵 Prompt length: {len(prompt) if prompt else 0}')
-    print(f'🔵 Prompt content (first 500 chars):')
-    print(prompt[:500] if prompt else 'PROMPT IS EMPTY/NONE!')
-    print('🔵 ========================')
-    
-    # Validate
-    if not prompt or prompt.strip() == '':
-        return jsonify({
-            'success': False,
-            'error': 'Generated prompt is empty!'
-        }), 500
-    
-    try:
-        if request_count >= DAILY_LIMIT:
-            return jsonify({
-                'error': 'Daily quota exceeded',
-                'success': False}), 429
-        
-        else:
-            ai_text = gemini_service.generate(prompt)
-            cleaned = clean_json_response(ai_text)
-            request_count += 1
-            print(f'Generated recipe: {cleaned}')
-            parsed = json.loads(cleaned)
-            if is_gemini_error(parsed):
-                return jsonify({'success': False, 'error': parsed['error']}), 422
-            return jsonify({
-                'success': True,
-                'recipe': parsed,
-                'context': context
-            })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    return generate_recipe_response(prompt, context)
     
 @app.route('/api/generate-from-url', methods=['POST'])
 def generate_from_url():
@@ -300,7 +299,6 @@ def get_sample_recipe():
 
 @app.route('/api/remix', methods=['POST'])
 def remix_recipe():
-    global request_count
     data = request.get_json(silent=True)
     if not isinstance(data, dict) or not valid_recipe(data.get('recipe')):
         return jsonify(success=False, error='A complete source recipe is required'), 400
@@ -311,22 +309,8 @@ def remix_recipe():
         return jsonify(success=False, error='Instructions must be at most 1000 characters'), 400
     if language not in ('en', 'vi') or type(portions) is not int or portions < 1:
         return jsonify(success=False, error='Invalid language or portion count'), 400
-    if request_count >= DAILY_LIMIT:
-        return jsonify(success=False, error='Daily quota exceeded'), 429
-
-    try:
-        prompt = build_remix_prompt(data['recipe'], instructions.strip(), language)
-        ai_text = gemini_service.generate(prompt)
-        request_count += 1
-        recipe = json.loads(clean_json_response(ai_text))
-        if not valid_recipe(recipe):
-            return jsonify(success=False, error='AI did not return a complete recipe'), 422
-        return jsonify(success=True, recipe=recipe)
-    except (ValueError, TypeError):
-        return jsonify(success=False, error='AI returned an invalid recipe'), 422
-    except Exception:
-        app.logger.exception('Recipe remix failed')
-        return jsonify(success=False, error='Recipe generation is unavailable'), 503
+    prompt = build_remix_prompt(data['recipe'], instructions.strip(), language)
+    return generate_recipe_response(prompt)
 
 
 @app.route('/api/energy-note', methods=['POST'])

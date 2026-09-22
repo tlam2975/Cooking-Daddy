@@ -3,6 +3,7 @@ import '../data/models/recipe_tags.dart';
 import 'package:http/http.dart' as http;
 import '../data/models/recipe.dart';
 import 'ai_interface.dart';
+import 'location_service.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:uuid/uuid.dart';
@@ -60,51 +61,23 @@ class GeminiService implements AIInterface {
         }),
       ).timeout(const Duration(seconds: 60));
 
-      if (response.statusCode == 429) {
-        return AIGenerationResult(success: false, error: 'remix_quota_error');
-      }
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      if (response.statusCode != 200 ||
-          !_isSuccess(data) ||
-          data['recipe'] is! Map) {
-        return AIGenerationResult(
-          success: false,
-          error: 'remix_generation_error',
-        );
-      }
-      final remix = _convertToRecipe(data['recipe']);
-      if (remix.name.trim().isEmpty ||
-          remix.ingredients.isEmpty ||
-          remix.steps.isEmpty ||
-          remix.steps.any((step) => step.instruction.trim().isEmpty)) {
-        return AIGenerationResult(
-          success: false,
-          error: 'remix_generation_error',
-        );
-      }
+      final result = _readRecipeResponse(response);
+      if (!result.success || result.recipe == null) return result;
+      final remix = result.recipe!;
       remix.basePortions = source.basePortions;
       remix.sourceRecipeId = source.sourceRecipeId ?? source.cloudId;
       // The original photo and energy note may no longer describe this variation.
       remix.url = null;
       remix.imageUrl = null;
-      return AIGenerationResult(success: true, recipe: remix);
+      return result;
     } on TimeoutException {
-      return AIGenerationResult(success: false, error: 'remix_timeout_error');
+      return AIGenerationResult(success: false, error: 'ai_timeout_error');
     } on SocketException {
-      return AIGenerationResult(
-        success: false,
-        error: 'remix_connection_error',
-      );
+      return AIGenerationResult(success: false, error: 'ai_connection_error');
     } on http.ClientException {
-      return AIGenerationResult(
-        success: false,
-        error: 'remix_connection_error',
-      );
+      return AIGenerationResult(success: false, error: 'ai_connection_error');
     } catch (_) {
-      return AIGenerationResult(
-        success: false,
-        error: 'remix_generation_error',
-      );
+      return AIGenerationResult(success: false, error: 'ai_generation_error');
     }
   }
 
@@ -115,23 +88,17 @@ class GeminiService implements AIInterface {
     String? dish,
     String sessionLength = 'normal',
     String difficulty = 'normal',
-    String location = 'Hanoi',
+    RecipeLocation? location,
+    String languageCode = 'en',
   }) async {
     try {
-      print('🔵 ===== GEMINI SERVICE =====');
-      print('🔵 Calling: $baseUrl/api/smart-generate');
-      print('🔵 Ingredients: "$ingredients"');
-      print('🔵 Tools: "$tools"');
-      print('🔵 Dish: "$dish"');
-      print('🔵 Session: $sessionLength');
-      print('🔵 Difficulty: $difficulty');
-
-      // Build request body
-      final body = {
+      final body = <String, dynamic>{
         'ingredients': ingredients,
         'sessionLength': sessionLength,
         'difficulty': difficulty,
-        'location': location,
+        'language': languageCode,
+        'localHour': DateTime.now().hour,
+        if (location != null) 'location': location.toJson(),
       };
 
       // Add optional fields only if provided
@@ -142,70 +109,59 @@ class GeminiService implements AIInterface {
         body['dish'] = dish;
       }
 
-      print('🔵 Request body: ${jsonEncode(body)}');
-      print('🔵 ==========================');
+      final response = await (_client?.post ?? http.post)(
+        Uri.parse('$baseUrl/api/smart-generate'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 60));
 
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/api/smart-generate'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 60));
+      return _readRecipeResponse(response);
+    } on TimeoutException {
+      return AIGenerationResult(success: false, error: 'ai_timeout_error');
+    } on SocketException {
+      return AIGenerationResult(success: false, error: 'ai_connection_error');
+    } on http.ClientException {
+      return AIGenerationResult(success: false, error: 'ai_connection_error');
+    } catch (_) {
+      return AIGenerationResult(success: false, error: 'ai_generation_error');
+    }
+  }
 
-      print(response.statusCode);
-      print(response.body);
-      print('🔵 Response received from server: ${response}');
-      print('🟢 Response status: ${response.statusCode}');
-      print('🟢 Response body: ${response.body}');
-
-      final data = jsonDecode(response.body);
-
-      if (_isSuccess(data)) {
-        print('Fetched data successfullly!');
-
-        if (data['recipe'] != null) {
-          final recipe = _convertToRecipe(data['recipe']);
-          print('✅ Recipe converted: ${recipe.name}');
-
-          return AIGenerationResult(
-            success: true,
-            recipe: recipe,
-            remainingQuota: data['remaining_quota'],
-          );
-        } else {
-          print('❌ Server returned success=false or no recipe');
-          return AIGenerationResult(
-            success: false,
-            error: data['error'] ?? 'Unknown error',
-          );
-        }
-      } else if (response.statusCode == 429) {
-        return AIGenerationResult(
-          success: false,
-          error: 'Daily quota exceeded',
-        );
-      } else {
-        print(' Error status: ${response.statusCode}');
-        return AIGenerationResult(
-          success: false,
-          error: data['error'] ?? 'Generation failed',
-        );
-      }
-    } on TimeoutException catch (e) {
-      print('🔴 TIMEOUT: $e');
-      return AIGenerationResult(success: false, error: 'Request timed out');
-    } on SocketException catch (e) {
-      print('🔴 SOCKET: $e');
+  AIGenerationResult _readRecipeResponse(http.Response response) {
+    if (response.statusCode == 429) {
+      return AIGenerationResult(success: false, error: 'ai_quota_error');
+    }
+    if (response.statusCode == 404) {
+      return AIGenerationResult(success: false, error: 'ai_endpoint_missing');
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode != 200 ||
+        !_isSuccess(data) ||
+        data['recipe'] is! Map) {
+      const knownErrors = {
+        'ai_not_configured',
+        'ai_invalid_recipe',
+        'ai_quota_error',
+      };
       return AIGenerationResult(
         success: false,
-        error: 'Cannot connect to server',
+        error: knownErrors.contains(data['error_code'])
+            ? data['error_code']
+            : 'ai_generation_error',
       );
-    } catch (e) {
-      print('🔴 EXCEPTION: $e');
-      print('🔴 TYPE: ${e.runtimeType}');
-      return AIGenerationResult(success: false, error: 'Error: $e');
     }
+    final recipe = _convertToRecipe(data['recipe']);
+    if (recipe.name.trim().isEmpty ||
+        recipe.ingredients.isEmpty ||
+        recipe.steps.isEmpty ||
+        recipe.steps.any((step) => step.instruction.trim().isEmpty)) {
+      return AIGenerationResult(success: false, error: 'ai_invalid_recipe');
+    }
+    return AIGenerationResult(
+      success: true,
+      recipe: recipe,
+      remainingQuota: _toInt(data['remaining_quota']),
+    );
   }
 
   @override
@@ -334,7 +290,7 @@ class GeminiService implements AIInterface {
         instruction: step['instruction'] ?? '',
         heat: step['heat'],
         seasonings: step['seasoning'],
-        timer: step['time'],
+        timer: _toInt(step['time']),
         notes: step['notes'],
         whatToLookFor: step['whatToLookFor'] ?? '',
         index: index,

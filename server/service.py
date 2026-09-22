@@ -8,7 +8,7 @@ class SmartRecipeService:
 
     def build_context(self, req):
         now = datetime.now()
-        hour = now.hour
+        hour = req.local_hour if req.local_hour is not None else now.hour
 
         meal_time = (
             'breakfast' if 5 <= hour < 9 else
@@ -26,9 +26,16 @@ class SmartRecipeService:
         }
 
     def _get_weather(self, location):
+        if not self.weather_api_key:
+            return None
         try:
-            url = f'https://api.openweathermap.org/data/2.5/weather?q={location}&appid={self.weather_api_key}&units=metric'
-            res = requests.get(url)
+            params = {'appid': self.weather_api_key, 'units': 'metric'}
+            if isinstance(location, dict):
+                params.update(lat=location['latitude'], lon=location['longitude'])
+            else:
+                params['q'] = location
+            res = requests.get('https://api.openweathermap.org/data/2.5/weather',
+                               params=params, timeout=5)
 
             if res.status_code != 200:
                 return None

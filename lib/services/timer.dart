@@ -6,6 +6,8 @@ class TimerService extends ChangeNotifier {
   Timer? _timer;
   int _remainingSeconds = 0;
   bool _isRunning = false;
+  int _scheduleGeneration = 0;
+  bool _isDisposed = false;
 
   int get remainingSeconds => _remainingSeconds;
   bool get isRunning => _isRunning;
@@ -15,17 +17,25 @@ class TimerService extends ChangeNotifier {
     required int seconds,
     required String recipeName,
     required int stepNumber,
+    bool scheduleNotification = true,
   }) async {
+    final scheduleGeneration = ++_scheduleGeneration;
     _remainingSeconds = seconds;
     _isRunning = true;
     notifyListeners();
 
-    // CRITICAL: Schedule notification IMMEDIATELY (not after countdown)
-    await NotificationService.scheduleTimerNotification(
-      seconds: seconds,
-      recipeName: recipeName,
-      stepNumber: stepNumber,
-    );
+    if (scheduleNotification) {
+      await NotificationService.scheduleTimerNotification(
+        seconds: seconds,
+        recipeName: recipeName,
+        stepNumber: stepNumber,
+      );
+
+      if (_isDisposed || scheduleGeneration != _scheduleGeneration) {
+        await NotificationService.cancelScheduledNotifications();
+        return;
+      }
+    }
 
     print('✅ Timer started: $seconds seconds');
 
@@ -42,6 +52,7 @@ class TimerService extends ChangeNotifier {
   }
 
   void stopTimer() {
+    _scheduleGeneration++;
     _timer?.cancel();
     _timer = null;
     _isRunning = false;
@@ -55,6 +66,8 @@ class TimerService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _scheduleGeneration++;
     _timer?.cancel();
     NotificationService.cancelScheduledNotifications();
     super.dispose();

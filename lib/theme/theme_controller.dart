@@ -5,12 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// dark palettes aren't designed yet (see `_Palettes.dark`) — no dark-mode
 /// UI is exposed until those are approved.
 enum ThemePreset {
-  warm('Ấm áp'),
-  sage('Xanh bạc hà'),
-  ocean('Biển');
+  original('theme_original'),
+  warm('theme_warm'),
+  sage('theme_sage'),
+  ocean('theme_ocean');
 
-  final String label;
-  const ThemePreset(this.label);
+  final String labelKey;
+  const ThemePreset(this.labelKey);
 }
 
 /// Light vs dark variant of whichever preset is active. Only `light` has
@@ -54,6 +55,17 @@ class _Palettes {
   _Palettes._();
 
   static const Map<ThemePreset, AppColorScheme> light = {
+    ThemePreset.original: AppColorScheme(
+      primary: Color(0xFFFFA4A4),
+      primaryLight: Color(0xFFFFEAEA),
+      background: Color(0xFFFFEAEA),
+      surface: Colors.white,
+      border: Color(0xFFFFCFCF),
+      textPrimary: Color(0xFF241C1C),
+      textSecondary: Color(0xFF8F6D6D),
+      success: Color(0xFF4CAF7D),
+      successLight: Color(0xFFE1F3E9),
+    ),
     ThemePreset.warm: AppColorScheme(
       primary: Color(0xFFE8604C),
       primaryLight: Color(0xFFFCE0D8),

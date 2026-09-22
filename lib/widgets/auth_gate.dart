@@ -84,10 +84,6 @@ class _SyncGateState extends State<_SyncGate> {
           );
         }
 
-        if (snapshot.hasError) {
-          print('Recipe sync failed: ${snapshot.error}');
-        }
-
         return const MainShell();
       },
     );

@@ -5,6 +5,7 @@ import 'dart:ui';
 import '../data/repositories/recipe_repository.dart';
 import '../data/models/recipe.dart';
 import '../theme/app_theme.dart';
+import '../widgets/recipe_image.dart';
 // import 'package:cooking_daddy/main.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../data/models/list_categories.dart';
@@ -44,6 +45,7 @@ class _HomePageState extends State<HomePage> {
   List<Recipe> recipes = [];
   List<Recipe> filteredRecipes = [];
   String? selectedCategoryFilter;
+  StreamSubscription<List<Recipe>>? _recipesSubscription;
 
   List<String> get categories {
     return CategoryData.getDisplayNames(context.locale.languageCode);
@@ -95,8 +97,20 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _pickRandomQuote();
     Future.delayed(Duration(milliseconds: 100));
-    _loadRecipes();
+    _watchRecipes();
     _searchController.addListener(_onSearchChanged);
+  }
+
+  void _watchRecipes() {
+    _recipesSubscription?.cancel();
+    _recipesSubscription = _repository.watchAllRecipes().listen((items) {
+      if (!mounted) return;
+      setState(() {
+        recipes = items;
+        isLoading = false;
+      });
+      _filterRecipes();
+    });
   }
 
   void _pickRandomQuote() {
@@ -132,7 +146,7 @@ class _HomePageState extends State<HomePage> {
     _filterRecipes();
 
     try {
-      await _repository.updateRecipe(recipe);
+      await _repository.setFavorite(recipe, recipe.isFavorite);
     } catch (_) {
       if (!mounted) return;
       recipe.isFavorite = wasFavorite;
@@ -222,8 +236,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildRecipeCard(Recipe recipe) {
-    final imageUrl = recipe.imageUrl;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
@@ -239,18 +251,11 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              ClipRRect(
+              RecipeImage(
+                recipe: recipe,
+                width: 78,
+                height: 78,
                 borderRadius: AppRadii.medium,
-                child: imageUrl != null && imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        width: 78,
-                        height: 78,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _recipeImageFallback(),
-                      )
-                    : _recipeImageFallback(),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -359,15 +364,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _recipeImageFallback() {
-    return Container(
-      width: 78,
-      height: 78,
-      color: AppColors.primaryLight,
-      child: Icon(Icons.ramen_dining_outlined, color: AppColors.primary),
     );
   }
 
@@ -508,23 +504,25 @@ class _HomePageState extends State<HomePage> {
             // Header
             Container(
               width: double.infinity,
-              color: const Color(0xFFFFA4A4),
+              color: AppColors.primaryLight,
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     'Cooking Daddy',
                     style: TextStyle(
                       fontSize: 40,
                       fontWeight: FontWeight.w500,
-                      color: Color.fromARGB(255, 255, 230, 0),
+                      color: AppColors.primary,
                       letterSpacing: 2,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     randomQuote,
-                    style: TextStyle(fontSize: 20, color: Colors.black),
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ],
               ),
@@ -666,10 +664,10 @@ class _HomePageState extends State<HomePage> {
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  const Color(0xFFFFEAEA).withOpacity(0.9),
-                                  const Color(0xFFFFEAEA).withOpacity(0.7),
-                                  const Color(0xFFFFEAEA).withOpacity(0.3),
-                                  const Color(0xFFFFEAEA).withOpacity(0.0),
+                                  AppColors.background.withOpacity(0.9),
+                                  AppColors.background.withOpacity(0.7),
+                                  AppColors.background.withOpacity(0.3),
+                                  AppColors.background.withOpacity(0.0),
                                 ],
                                 stops: const [0.0, 0.4, 0.7, 1.0],
                               ),
@@ -738,6 +736,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _recipesSubscription?.cancel();
     _searchController.removeListener(_onSearchChanged); // ← Remove listener
     _searchController.dispose(); // ← Dispose controller
     super.dispose();

@@ -28,5 +28,11 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Cooking Daddy uses your location to suggest recipes for your local weather.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Cooking Daddy uses the camera so you can add photos to your recipes.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Cooking Daddy may access your photo library when adding recipe pictures.</string>
 </dict>
 </plist>

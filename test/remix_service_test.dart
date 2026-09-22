@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:cooking_daddy/data/models/recipe.dart';
 import 'package:cooking_daddy/services/gemini_service.dart';
+import 'package:cooking_daddy/services/location_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -98,6 +99,33 @@ void main() {
     },
   );
 
+  test('smart generation sends actual coordinates and uses the same recipe parser', () async {
+    final service = GeminiService(client: MockClient((request) async {
+      final body = jsonDecode(request.body);
+      expect(request.url.path, '/api/smart-generate');
+      expect(body['location'], {'latitude': 10.78, 'longitude': 106.7});
+      expect(body['language'], 'vi');
+      expect(body['localHour'], inInclusiveRange(0, 23));
+      return http.Response(jsonEncode({'success': true, 'recipe': generated}), 200);
+    }));
+    final result = await service.generateFromIngredients(ingredients: 'tofu', languageCode: 'vi',
+      location: const RecipeLocation(latitude: 10.78, longitude: 106.7));
+    expect(result.success, isTrue);
+    expect(result.recipe!.ingredients.single.name, 'tofu');
+    expect(result.recipe!.steps.single.timer, 120);
+    expect(result.recipe!.id, Isar.autoIncrement);
+  });
+
+  test('smart generation without permission sends no default location', () async {
+    final service = GeminiService(client: MockClient((request) async {
+      expect(jsonDecode(request.body).containsKey('location'), isFalse);
+      return http.Response('{"success":false,"error_code":"ai_not_configured"}', 503);
+    }));
+    final result = await service.generateFromIngredients(ingredients: 'rice');
+    expect(result.error, 'ai_not_configured');
+    expect(result.recipe, isNull);
+  });
+
   test('a remix of a remix retains the original source link', () async {
     source.sourceRecipeId = 'root-id';
     final service = GeminiService(
@@ -117,14 +145,19 @@ void main() {
   });
 
   for (final entry in {
-    'quota': (429, '', 'remix_quota_error'),
-    'server unavailable': (503, '{"success":false}', 'remix_generation_error'),
-    'invalid JSON': (200, '<html>Error</html>', 'remix_generation_error'),
-    'missing recipe': (200, '{"success":true}', 'remix_generation_error'),
+    'quota': (429, '', 'ai_quota_error'),
+    'server unavailable': (503, '{"success":false}', 'ai_generation_error'),
+    'invalid JSON': (200, '<html>Error</html>', 'ai_generation_error'),
+    'missing recipe': (200, '{"success":true}', 'ai_generation_error'),
+    'configuration missing': (
+      503,
+      '{"success":false,"error_code":"ai_not_configured"}',
+      'ai_not_configured',
+    ),
     'empty recipe': (
       200,
       '{"success":true,"recipe":{"steps":[]}}',
-      'remix_generation_error',
+      'ai_invalid_recipe',
     ),
   }.entries) {
     test('handles ${entry.key} without creating a draft', () async {
@@ -163,8 +196,8 @@ void main() {
         expect(
           result.error,
           failure is TimeoutException
-              ? 'remix_timeout_error'
-              : 'remix_connection_error',
+              ? 'ai_timeout_error'
+              : 'ai_connection_error',
         );
       }
     },

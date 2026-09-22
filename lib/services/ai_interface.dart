@@ -1,4 +1,5 @@
 import '../data/models/recipe.dart';
+import 'location_service.dart';
 
 /// Abstract interface for AI recipe generation
 abstract class AIInterface {
@@ -8,6 +9,8 @@ abstract class AIInterface {
     String? dish,
     String sessionLength = 'normal',
     String difficulty = 'normal',
+    RecipeLocation? location,
+    String languageCode = 'en',
   });
 
   Future<AIGenerationResult> generateFromUrl(String url);

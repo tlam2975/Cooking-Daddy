@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../data/repositories/auth_repository.dart';
+import '../services/recipe_sync_status.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
 
-/// NOTE: Account/Theme section labels are hardcoded Vietnamese for now —
-/// not yet wired to easy_localization, same to-do flagged on
-/// sign_in_screen.dart. Language section keeps its existing .tr() keys
-/// since that logic isn't changing. The old random-quote header was
-/// dropped — it didn't fit the revamped design and there's no mockup
-/// reference for this screen, flagging that as a judgment call.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -33,7 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Cài đặt',
+                'settings'.tr(),
                 style: AppTextStyles.sectionTitle.copyWith(fontSize: 26),
               ),
               const SizedBox(height: 20),
@@ -61,7 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            user?.displayName ?? 'Chưa đăng nhập',
+                            user?.displayName ?? 'not_signed_in'.tr(),
                             style: AppTextStyles.cardTitle,
                           ),
                           if (user?.email != null)
@@ -74,7 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // AuthGate's authStateChanges listener handles
                       // navigation back to SignInScreen automatically.
                       child: Text(
-                        'Đăng xuất',
+                        'sign_out'.tr(),
                         style: AppTextStyles.body.copyWith(
                           color: AppColors.primary,
                         ),
@@ -85,11 +80,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               const SizedBox(height: 24),
-              Text('Giao diện', style: AppTextStyles.sectionTitle),
+              Text('theme'.tr(), style: AppTextStyles.sectionTitle),
               const SizedBox(height: 12),
               _sectionCard(
                 child: Column(
                   children: ThemePreset.values.map(_presetTile).toList(),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+              Text('sync_status'.tr(), style: AppTextStyles.sectionTitle),
+              const SizedBox(height: 12),
+              _sectionCard(child: const _SyncStatusSummary()),
+
+              const SizedBox(height: 24),
+              Text('diagnostics'.tr(), style: AppTextStyles.sectionTitle),
+              const SizedBox(height: 12),
+              _sectionCard(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    Icons.terminal_outlined,
+                    color: AppColors.primary,
+                    size: 28,
+                  ),
+                  title: Text('app_logs'.tr(), style: AppTextStyles.cardTitle),
+                  subtitle: Text(
+                    'app_logs_description'.tr(),
+                    style: AppTextStyles.caption,
+                  ),
+                  trailing: Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                  onTap: () => Navigator.pushNamed(context, '/appLogs'),
                 ),
               ),
 
@@ -162,7 +187,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            Expanded(child: Text(preset.label, style: AppTextStyles.body)),
+            Expanded(
+              child: Text(preset.labelKey.tr(), style: AppTextStyles.body),
+            ),
             if (isSelected)
               Icon(Icons.check_circle, color: AppColors.primary, size: 20),
           ],
@@ -217,5 +244,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+}
+
+class _SyncStatusSummary extends StatelessWidget {
+  const _SyncStatusSummary();
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: RecipeSyncStatusController.instance,
+      builder: (context, _) {
+        final status = RecipeSyncStatusController.instance;
+        final lastSyncedAt = status.lastSyncedAt;
+        final stateLabel = switch (status.state) {
+          RecipeSyncState.idle => 'sync_not_started'.tr(),
+          RecipeSyncState.savedLocally => 'saved_locally'.tr(),
+          RecipeSyncState.syncing => 'syncing_recipes'.tr(),
+          RecipeSyncState.synced =>
+            lastSyncedAt == null
+                ? 'sync_complete'.tr()
+                : 'last_sync_at'.tr(args: [_formatTime(context, lastSyncedAt)]),
+          RecipeSyncState.failed =>
+            lastSyncedAt == null
+                ? 'sync_failed'.tr()
+                : 'sync_failed_last_sync'.tr(
+                    args: [_formatTime(context, lastSyncedAt)],
+                  ),
+        };
+
+        final error = status.errorDescription;
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              status.state == RecipeSyncState.failed
+                  ? Icons.cloud_off_outlined
+                  : Icons.cloud_done_outlined,
+              color: status.state == RecipeSyncState.failed
+                  ? Colors.red.shade700
+                  : AppColors.primary,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(stateLabel, style: AppTextStyles.body),
+                  if (status.state == RecipeSyncState.failed &&
+                      error != null) ...[
+                    const SizedBox(height: 6),
+                    SelectableText(
+                      error,
+                      style: AppTextStyles.caption.copyWith(
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  static String _formatTime(BuildContext context, DateTime value) {
+    return DateFormat.Hm(context.locale.toString()).format(value);
   }
 }

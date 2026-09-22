@@ -32,71 +32,91 @@ const RecipeSchema = CollectionSchema(
       name: r'cloudId',
       type: IsarType.string,
     ),
-    r'createdDate': PropertySchema(
+    r'cookedAt': PropertySchema(
       id: 3,
+      name: r'cookedAt',
+      type: IsarType.dateTimeList,
+    ),
+    r'createdDate': PropertySchema(
+      id: 4,
       name: r'createdDate',
       type: IsarType.dateTime,
     ),
+    r'displayImageSources': PropertySchema(
+      id: 5,
+      name: r'displayImageSources',
+      type: IsarType.stringList,
+    ),
     r'energyNote': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'energyNote',
       type: IsarType.string,
     ),
     r'imageUrl': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'imageUrl',
       type: IsarType.string,
     ),
     r'ingredients': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'ingredients',
       type: IsarType.objectList,
       target: r'Ingredient',
     ),
     r'isFavorite': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'isFavorite',
       type: IsarType.bool,
     ),
     r'isSeed': PropertySchema(
-      id: 8,
+      id: 10,
       name: r'isSeed',
       type: IsarType.bool,
     ),
     r'name': PropertySchema(
-      id: 9,
+      id: 11,
       name: r'name',
       type: IsarType.string,
     ),
+    r'photoSources': PropertySchema(
+      id: 12,
+      name: r'photoSources',
+      type: IsarType.stringList,
+    ),
     r'sourceRecipeId': PropertySchema(
-      id: 10,
+      id: 13,
       name: r'sourceRecipeId',
       type: IsarType.string,
     ),
     r'steps': PropertySchema(
-      id: 11,
+      id: 14,
       name: r'steps',
       type: IsarType.objectList,
       target: r'Step',
     ),
     r'tags': PropertySchema(
-      id: 12,
+      id: 15,
       name: r'tags',
       type: IsarType.stringList,
     ),
+    r'thumbnailSource': PropertySchema(
+      id: 16,
+      name: r'thumbnailSource',
+      type: IsarType.string,
+    ),
     r'tools': PropertySchema(
-      id: 13,
+      id: 17,
       name: r'tools',
       type: IsarType.objectList,
       target: r'Tool',
     ),
     r'updatedAt': PropertySchema(
-      id: 14,
+      id: 18,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'url': PropertySchema(
-      id: 15,
+      id: 19,
       name: r'url',
       type: IsarType.string,
     )
@@ -154,6 +174,14 @@ int _recipeEstimateSize(
   var bytesCount = offsets.last;
   bytesCount += 3 + object.categoryKey.length * 3;
   bytesCount += 3 + object.cloudId.length * 3;
+  bytesCount += 3 + object.cookedAt.length * 8;
+  bytesCount += 3 + object.displayImageSources.length * 3;
+  {
+    for (var i = 0; i < object.displayImageSources.length; i++) {
+      final value = object.displayImageSources[i];
+      bytesCount += value.length * 3;
+    }
+  }
   {
     final value = object.energyNote;
     if (value != null) {
@@ -175,6 +203,13 @@ int _recipeEstimateSize(
     }
   }
   bytesCount += 3 + object.name.length * 3;
+  bytesCount += 3 + object.photoSources.length * 3;
+  {
+    for (var i = 0; i < object.photoSources.length; i++) {
+      final value = object.photoSources[i];
+      bytesCount += value.length * 3;
+    }
+  }
   {
     final value = object.sourceRecipeId;
     if (value != null) {
@@ -194,6 +229,12 @@ int _recipeEstimateSize(
     for (var i = 0; i < object.tags.length; i++) {
       final value = object.tags[i];
       bytesCount += value.length * 3;
+    }
+  }
+  {
+    final value = object.thumbnailSource;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
     }
   }
   bytesCount += 3 + object.tools.length * 3;
@@ -222,34 +263,38 @@ void _recipeSerialize(
   writer.writeLong(offsets[0], object.basePortions);
   writer.writeString(offsets[1], object.categoryKey);
   writer.writeString(offsets[2], object.cloudId);
-  writer.writeDateTime(offsets[3], object.createdDate);
-  writer.writeString(offsets[4], object.energyNote);
-  writer.writeString(offsets[5], object.imageUrl);
+  writer.writeDateTimeList(offsets[3], object.cookedAt);
+  writer.writeDateTime(offsets[4], object.createdDate);
+  writer.writeStringList(offsets[5], object.displayImageSources);
+  writer.writeString(offsets[6], object.energyNote);
+  writer.writeString(offsets[7], object.imageUrl);
   writer.writeObjectList<Ingredient>(
-    offsets[6],
+    offsets[8],
     allOffsets,
     IngredientSchema.serialize,
     object.ingredients,
   );
-  writer.writeBool(offsets[7], object.isFavorite);
-  writer.writeBool(offsets[8], object.isSeed);
-  writer.writeString(offsets[9], object.name);
-  writer.writeString(offsets[10], object.sourceRecipeId);
+  writer.writeBool(offsets[9], object.isFavorite);
+  writer.writeBool(offsets[10], object.isSeed);
+  writer.writeString(offsets[11], object.name);
+  writer.writeStringList(offsets[12], object.photoSources);
+  writer.writeString(offsets[13], object.sourceRecipeId);
   writer.writeObjectList<Step>(
-    offsets[11],
+    offsets[14],
     allOffsets,
     StepSchema.serialize,
     object.steps,
   );
-  writer.writeStringList(offsets[12], object.tags);
+  writer.writeStringList(offsets[15], object.tags);
+  writer.writeString(offsets[16], object.thumbnailSource);
   writer.writeObjectList<Tool>(
-    offsets[13],
+    offsets[17],
     allOffsets,
     ToolSchema.serialize,
     object.tools,
   );
-  writer.writeDateTime(offsets[14], object.updatedAt);
-  writer.writeString(offsets[15], object.url);
+  writer.writeDateTime(offsets[18], object.updatedAt);
+  writer.writeString(offsets[19], object.url);
 }
 
 Recipe _recipeDeserialize(
@@ -262,37 +307,39 @@ Recipe _recipeDeserialize(
     basePortions: reader.readLongOrNull(offsets[0]) ?? 1,
     categoryKey: reader.readString(offsets[1]),
     cloudId: reader.readString(offsets[2]),
-    createdDate: reader.readDateTime(offsets[3]),
-    energyNote: reader.readStringOrNull(offsets[4]),
-    imageUrl: reader.readStringOrNull(offsets[5]),
+    cookedAt: reader.readDateTimeList(offsets[3]) ?? const [],
+    createdDate: reader.readDateTime(offsets[4]),
+    energyNote: reader.readStringOrNull(offsets[6]),
+    imageUrl: reader.readStringOrNull(offsets[7]),
     ingredients: reader.readObjectList<Ingredient>(
-          offsets[6],
+          offsets[8],
           IngredientSchema.deserialize,
           allOffsets,
           Ingredient(),
         ) ??
         const [],
-    isFavorite: reader.readBoolOrNull(offsets[7]) ?? false,
-    isSeed: reader.readBoolOrNull(offsets[8]) ?? false,
-    name: reader.readString(offsets[9]),
-    sourceRecipeId: reader.readStringOrNull(offsets[10]),
+    isFavorite: reader.readBoolOrNull(offsets[9]) ?? false,
+    isSeed: reader.readBoolOrNull(offsets[10]) ?? false,
+    name: reader.readString(offsets[11]),
+    photoSources: reader.readStringList(offsets[12]) ?? const [],
+    sourceRecipeId: reader.readStringOrNull(offsets[13]),
     steps: reader.readObjectList<Step>(
-          offsets[11],
+          offsets[14],
           StepSchema.deserialize,
           allOffsets,
           Step(),
         ) ??
         const [],
-    tags: reader.readStringList(offsets[12]) ?? const [],
+    tags: reader.readStringList(offsets[15]) ?? const [],
     tools: reader.readObjectList<Tool>(
-          offsets[13],
+          offsets[17],
           ToolSchema.deserialize,
           allOffsets,
           Tool(),
         ) ??
         const [],
-    updatedAt: reader.readDateTime(offsets[14]),
-    url: reader.readStringOrNull(offsets[15]),
+    updatedAt: reader.readDateTime(offsets[18]),
+    url: reader.readStringOrNull(offsets[19]),
   );
   object.id = id;
   return object;
@@ -312,12 +359,16 @@ P _recipeDeserializeProp<P>(
     case 2:
       return (reader.readString(offset)) as P;
     case 3:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readDateTimeList(offset) ?? const []) as P;
     case 4:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 5:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 6:
+      return (reader.readStringOrNull(offset)) as P;
+    case 7:
+      return (reader.readStringOrNull(offset)) as P;
+    case 8:
       return (reader.readObjectList<Ingredient>(
             offset,
             IngredientSchema.deserialize,
@@ -325,15 +376,17 @@ P _recipeDeserializeProp<P>(
             Ingredient(),
           ) ??
           const []) as P;
-    case 7:
-      return (reader.readBoolOrNull(offset) ?? false) as P;
-    case 8:
-      return (reader.readBoolOrNull(offset) ?? false) as P;
     case 9:
-      return (reader.readString(offset)) as P;
+      return (reader.readBoolOrNull(offset) ?? false) as P;
     case 10:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readBoolOrNull(offset) ?? false) as P;
     case 11:
+      return (reader.readString(offset)) as P;
+    case 12:
+      return (reader.readStringList(offset) ?? const []) as P;
+    case 13:
+      return (reader.readStringOrNull(offset)) as P;
+    case 14:
       return (reader.readObjectList<Step>(
             offset,
             StepSchema.deserialize,
@@ -341,9 +394,11 @@ P _recipeDeserializeProp<P>(
             Step(),
           ) ??
           const []) as P;
-    case 12:
+    case 15:
       return (reader.readStringList(offset) ?? const []) as P;
-    case 13:
+    case 16:
+      return (reader.readStringOrNull(offset)) as P;
+    case 17:
       return (reader.readObjectList<Tool>(
             offset,
             ToolSchema.deserialize,
@@ -351,9 +406,9 @@ P _recipeDeserializeProp<P>(
             Tool(),
           ) ??
           const []) as P;
-    case 14:
+    case 18:
       return (reader.readDateTime(offset)) as P;
-    case 15:
+    case 19:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -905,6 +960,144 @@ extension RecipeQueryFilter on QueryBuilder<Recipe, Recipe, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> cookedAtElementEqualTo(
+      DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'cookedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      cookedAtElementGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'cookedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> cookedAtElementLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'cookedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> cookedAtElementBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'cookedAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> cookedAtLengthEqualTo(
+      int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'cookedAt',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> cookedAtIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'cookedAt',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> cookedAtIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'cookedAt',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> cookedAtLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'cookedAt',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> cookedAtLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'cookedAt',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> cookedAtLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'cookedAt',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
   QueryBuilder<Recipe, Recipe, QAfterFilterCondition> createdDateEqualTo(
       DateTime value) {
     return QueryBuilder.apply(this, (query) {
@@ -955,6 +1148,233 @@ extension RecipeQueryFilter on QueryBuilder<Recipe, Recipe, QFilterCondition> {
         upper: upper,
         includeUpper: includeUpper,
       ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesElementEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'displayImageSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'displayImageSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'displayImageSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'displayImageSources',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesElementStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'displayImageSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesElementEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'displayImageSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesElementContains(String value,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'displayImageSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesElementMatches(String pattern,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'displayImageSources',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'displayImageSources',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'displayImageSources',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'displayImageSources',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'displayImageSources',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'displayImageSources',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'displayImageSources',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'displayImageSources',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      displayImageSourcesLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'displayImageSources',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
     });
   }
 
@@ -1536,6 +1956,228 @@ extension RecipeQueryFilter on QueryBuilder<Recipe, Recipe, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesElementEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'photoSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'photoSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'photoSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'photoSources',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesElementStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'photoSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesElementEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'photoSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesElementContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'photoSources',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesElementMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'photoSources',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'photoSources',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'photoSources',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> photoSourcesLengthEqualTo(
+      int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'photoSources',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> photoSourcesIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'photoSources',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> photoSourcesIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'photoSources',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'photoSources',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      photoSourcesLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'photoSources',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> photoSourcesLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'photoSources',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
   QueryBuilder<Recipe, Recipe, QAfterFilterCondition> sourceRecipeIdIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1982,6 +2624,155 @@ extension RecipeQueryFilter on QueryBuilder<Recipe, Recipe, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> thumbnailSourceIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'thumbnailSource',
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      thumbnailSourceIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'thumbnailSource',
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> thumbnailSourceEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'thumbnailSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      thumbnailSourceGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'thumbnailSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> thumbnailSourceLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'thumbnailSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> thumbnailSourceBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'thumbnailSource',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> thumbnailSourceStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'thumbnailSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> thumbnailSourceEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'thumbnailSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> thumbnailSourceContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'thumbnailSource',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> thumbnailSourceMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'thumbnailSource',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition> thumbnailSourceIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'thumbnailSource',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterFilterCondition>
+      thumbnailSourceIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'thumbnailSource',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Recipe, Recipe, QAfterFilterCondition> toolsLengthEqualTo(
       int length) {
     return QueryBuilder.apply(this, (query) {
@@ -2410,6 +3201,18 @@ extension RecipeQuerySortBy on QueryBuilder<Recipe, Recipe, QSortBy> {
     });
   }
 
+  QueryBuilder<Recipe, Recipe, QAfterSortBy> sortByThumbnailSource() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'thumbnailSource', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterSortBy> sortByThumbnailSourceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'thumbnailSource', Sort.desc);
+    });
+  }
+
   QueryBuilder<Recipe, Recipe, QAfterSortBy> sortByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
@@ -2568,6 +3371,18 @@ extension RecipeQuerySortThenBy on QueryBuilder<Recipe, Recipe, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Recipe, Recipe, QAfterSortBy> thenByThumbnailSource() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'thumbnailSource', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QAfterSortBy> thenByThumbnailSourceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'thumbnailSource', Sort.desc);
+    });
+  }
+
   QueryBuilder<Recipe, Recipe, QAfterSortBy> thenByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
@@ -2614,9 +3429,21 @@ extension RecipeQueryWhereDistinct on QueryBuilder<Recipe, Recipe, QDistinct> {
     });
   }
 
+  QueryBuilder<Recipe, Recipe, QDistinct> distinctByCookedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'cookedAt');
+    });
+  }
+
   QueryBuilder<Recipe, Recipe, QDistinct> distinctByCreatedDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'createdDate');
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QDistinct> distinctByDisplayImageSources() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'displayImageSources');
     });
   }
 
@@ -2653,6 +3480,12 @@ extension RecipeQueryWhereDistinct on QueryBuilder<Recipe, Recipe, QDistinct> {
     });
   }
 
+  QueryBuilder<Recipe, Recipe, QDistinct> distinctByPhotoSources() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'photoSources');
+    });
+  }
+
   QueryBuilder<Recipe, Recipe, QDistinct> distinctBySourceRecipeId(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2664,6 +3497,14 @@ extension RecipeQueryWhereDistinct on QueryBuilder<Recipe, Recipe, QDistinct> {
   QueryBuilder<Recipe, Recipe, QDistinct> distinctByTags() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'tags');
+    });
+  }
+
+  QueryBuilder<Recipe, Recipe, QDistinct> distinctByThumbnailSource(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'thumbnailSource',
+          caseSensitive: caseSensitive);
     });
   }
 
@@ -2706,9 +3547,22 @@ extension RecipeQueryProperty on QueryBuilder<Recipe, Recipe, QQueryProperty> {
     });
   }
 
+  QueryBuilder<Recipe, List<DateTime>, QQueryOperations> cookedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'cookedAt');
+    });
+  }
+
   QueryBuilder<Recipe, DateTime, QQueryOperations> createdDateProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'createdDate');
+    });
+  }
+
+  QueryBuilder<Recipe, List<String>, QQueryOperations>
+      displayImageSourcesProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'displayImageSources');
     });
   }
 
@@ -2749,6 +3603,12 @@ extension RecipeQueryProperty on QueryBuilder<Recipe, Recipe, QQueryProperty> {
     });
   }
 
+  QueryBuilder<Recipe, List<String>, QQueryOperations> photoSourcesProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'photoSources');
+    });
+  }
+
   QueryBuilder<Recipe, String?, QQueryOperations> sourceRecipeIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'sourceRecipeId');
@@ -2764,6 +3624,12 @@ extension RecipeQueryProperty on QueryBuilder<Recipe, Recipe, QQueryProperty> {
   QueryBuilder<Recipe, List<String>, QQueryOperations> tagsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'tags');
+    });
+  }
+
+  QueryBuilder<Recipe, String?, QQueryOperations> thumbnailSourceProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'thumbnailSource');
     });
   }
 

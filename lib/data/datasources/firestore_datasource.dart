@@ -39,14 +39,26 @@ class FirestoreDatasource {
     }).toList();
   }
 
-  Future<void> pushRecipe(String uid, Recipe recipe) async {
-    await _recipesRef(uid).doc(recipe.cloudId).set(_recipeToMap(recipe));
+  Future<void> pushRecipe(
+    String uid,
+    Recipe recipe, {
+    bool includePhotos = true,
+  }) async {
+    final cloudId = _validatedCloudId(recipe);
+    final data = _recipeToMap(recipe);
+    if (!includePhotos) {
+      data.remove('photoSources');
+    }
+    await _recipesRef(
+      uid,
+    ).doc(cloudId).set(data, includePhotos ? null : SetOptions(merge: true));
   }
 
   Future<void> markRecipeDeleted(String uid, Recipe recipe) async {
+    final cloudId = _validatedCloudId(recipe);
     final now = DateTime.now();
-    await _recipesRef(uid).doc(recipe.cloudId).set({
-      'cloudId': recipe.cloudId,
+    await _recipesRef(uid).doc(cloudId).set({
+      'cloudId': cloudId,
       'name': recipe.name,
       'updatedAt': Timestamp.fromDate(now),
       'deletedAt': FieldValue.serverTimestamp(),
@@ -59,6 +71,7 @@ class FirestoreDatasource {
       'name': recipe.name,
       'url': recipe.url,
       'imageUrl': recipe.imageUrl,
+      'photoSources': recipe.photoSources.where(_isRemoteSource).toList(),
       'ingredients': recipe.ingredients.map(_ingredientToMap).toList(),
       'tools': recipe.tools.map(_toolToMap).toList(),
       'steps': recipe.steps.map(_stepToMap).toList(),
@@ -69,6 +82,7 @@ class FirestoreDatasource {
       'basePortions': recipe.basePortions,
       'isFavorite': recipe.isFavorite,
       'isSeed': recipe.isSeed,
+      'cookedAt': recipe.cookedAt.map(Timestamp.fromDate).toList(),
       'sourceRecipeId': recipe.sourceRecipeId,
       'energyNote': recipe.energyNote,
       'deletedAt': null,
@@ -81,6 +95,9 @@ class FirestoreDatasource {
       name: data['name'] as String? ?? 'Untitled Recipe',
       url: data['url'] as String?,
       imageUrl: data['imageUrl'] as String?,
+      photoSources: _listFrom(
+        data['photoSources'] ?? data['syncedImageUrls'],
+      ).map((url) => url.toString()).toList(),
       ingredients: _listFrom(
         data['ingredients'],
       ).map(_ingredientFromMap).toList(),
@@ -93,6 +110,9 @@ class FirestoreDatasource {
       basePortions: (data['basePortions'] as num?)?.toInt() ?? 1,
       isFavorite: data['isFavorite'] as bool? ?? false,
       isSeed: data['isSeed'] as bool? ?? false,
+      cookedAt: _listFrom(
+        data['cookedAt'],
+      ).map(_dateTimeFrom).whereType<DateTime>().toList(),
       sourceRecipeId: data['sourceRecipeId'] as String?,
       energyNote: data['energyNote'] as String?,
     );
@@ -172,5 +192,18 @@ class FirestoreDatasource {
     if (value is DateTime) return value;
     if (value is String) return DateTime.tryParse(value);
     return null;
+  }
+
+  bool _isRemoteSource(String source) {
+    final uri = Uri.tryParse(source);
+    return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+  }
+
+  String _validatedCloudId(Recipe recipe) {
+    final cloudId = recipe.cloudId.trim();
+    if (cloudId.isEmpty) {
+      throw StateError('Recipe ${recipe.id} has no cloud ID');
+    }
+    return cloudId;
   }
 }

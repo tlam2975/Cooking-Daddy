@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import '../services/ai_interface.dart';
 import '../services/gemini_service.dart';
+import '../services/location_service.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class GenerateFromIngredientsModal extends StatefulWidget {
-  const GenerateFromIngredientsModal({super.key});
+  final AIInterface? aiService;
+  final LocationService? locationService;
+
+  const GenerateFromIngredientsModal({
+    super.key,
+    this.aiService,
+    this.locationService,
+  });
 
   @override
   State<GenerateFromIngredientsModal> createState() =>
@@ -14,13 +23,17 @@ class _GenerateFromIngredientsModalState
     extends State<GenerateFromIngredientsModal> {
   final TextEditingController _ingredientsController = TextEditingController();
   final TextEditingController _toolsController = TextEditingController();
-  final AIInterface _aiService = GeminiService();
+  late final AIInterface _aiService = widget.aiService ?? GeminiService();
+  late final LocationService _locationService =
+      widget.locationService ?? LocationService();
 
   String _sessionLength = 'short';
   String _difficulty = 'normal';
   String? _dish;
 
   bool _isGenerating = false;
+  bool _useLocation = true;
+  bool _locationUnavailable = false;
 
   @override
   void dispose() {
@@ -30,6 +43,7 @@ class _GenerateFromIngredientsModalState
   }
 
   Future<void> _generate() async {
+    if (_isGenerating) return;
     if (_ingredientsController.text.trim().isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -40,7 +54,15 @@ class _GenerateFromIngredientsModalState
     print('🔵 ===== MODAL GENERATING =====');
     print('🔵 Ingredients: "${_ingredientsController.text.trim()}"');
 
-    setState(() => _isGenerating = true);
+    setState(() {
+      _isGenerating = true;
+      _locationUnavailable = false;
+    });
+    final location = _useLocation
+        ? await _locationService.requestLocation()
+        : null;
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    setState(() => _locationUnavailable = _useLocation && location == null);
 
     final result = await _aiService.generateFromIngredients(
       ingredients: _ingredientsController.text.trim(),
@@ -50,8 +72,11 @@ class _GenerateFromIngredientsModalState
       dish: _dish,
       sessionLength: _sessionLength,
       difficulty: _difficulty,
+      location: location,
+      languageCode: context.locale.languageCode,
     );
 
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
     setState(() => _isGenerating = false);
 
     print('🔵 Got result - success: ${result.success}');
@@ -71,7 +96,7 @@ class _GenerateFromIngredientsModalState
       // Show error, DON'T pop
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.error ?? 'Generation failed'),
+          content: Text((result.error ?? 'ai_generation_error').tr()),
           backgroundColor: Colors.red,
         ),
       );
@@ -202,6 +227,20 @@ class _GenerateFromIngredientsModalState
             const SizedBox(height: 24),
 
             // Generate Button
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: Text('use_local_weather'.tr()),
+              subtitle: Text('location_weather_purpose'.tr()),
+              value: _useLocation,
+              onChanged: _isGenerating
+                  ? null
+                  : (value) => setState(() => _useLocation = value),
+            ),
+            if (_locationUnavailable)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text('location_weather_unavailable'.tr()),
+              ),
             SizedBox(
               height: 50,
               child: ElevatedButton(

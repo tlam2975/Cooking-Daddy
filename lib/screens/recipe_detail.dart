@@ -6,6 +6,7 @@ import '../data/repositories/recipe_repository.dart';
 import '../services/energy_note_service.dart';
 import '../services/shopping_cart.dart';
 import '../theme/app_theme.dart';
+import '../widgets/recipe_image.dart';
 import '../widgets/remix_recipe_modal.dart';
 // import '../data/models/quotes.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -182,7 +183,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     });
 
     try {
-      await _repository.updateRecipe(currentRecipe);
+      await _repository.setFavorite(currentRecipe, currentRecipe.isFavorite);
     } catch (_) {
       if (!mounted) return;
       currentRecipe.isFavorite = wasFavorite;
@@ -287,42 +288,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   Widget _buildHeroImage(Recipe currentRecipe) {
-    final imageUrl = currentRecipe.imageUrl;
-    if (imageUrl == null || imageUrl.isEmpty) {
-      return Container(
-        height: 180,
-        decoration: BoxDecoration(
-          color: AppColors.primaryLight,
-          borderRadius: AppRadii.large,
-        ),
-        child: Icon(
-          Icons.ramen_dining_outlined,
-          color: AppColors.primary,
-          size: 48,
-        ),
-      );
-    }
-
-    return ClipRRect(
+    return RecipeImage(
+      recipe: currentRecipe,
+      width: double.infinity,
+      height: currentRecipe.thumbnailSource == null ? 180 : 220,
       borderRadius: AppRadii.large,
-      child: Image.network(
-        imageUrl,
-        width: double.infinity,
-        height: 220,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            height: 180,
-            alignment: Alignment.center,
-            color: AppColors.primaryLight,
-            child: Icon(
-              Icons.image_not_supported_outlined,
-              color: AppColors.primary,
-              size: 36,
-            ),
-          );
-        },
-      ),
     );
   }
 

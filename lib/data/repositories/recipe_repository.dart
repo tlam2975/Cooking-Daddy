@@ -3,16 +3,23 @@ import '../models/category.dart';
 import '../datasources/isar_datasource.dart';
 import '../datasources/firestore_datasource.dart';
 import 'auth_repository.dart';
+import '../../services/recipe_sync_status.dart';
 
 class RecipeRepository {
   final IsarDatasource _datasource = IsarDatasource();
   final FirestoreDatasource _firestore = FirestoreDatasource();
   final AuthRepository _authRepository = AuthRepository();
+  final RecipeSyncStatusController _syncStatus =
+      RecipeSyncStatusController.instance;
 
   // ========== RECIPE METHODS ==========
 
   Future<List<Recipe>> getAllRecipes() async {
     return await _datasource.getAllRecipes();
+  }
+
+  Stream<List<Recipe>> watchAllRecipes() {
+    return _datasource.watchAllRecipes();
   }
 
   Future<Recipe?> getRecipe(int id) async {
@@ -21,17 +28,37 @@ class RecipeRepository {
 
   Future<void> addRecipe(Recipe recipe) async {
     await _datasource.addRecipe(recipe);
+    _syncStatus.markSavedLocally();
     await _tryPushRecipe(recipe);
   }
 
   Future<void> updateRecipe(Recipe recipe) async {
     await _datasource.updateRecipe(recipe);
+    _syncStatus.markSavedLocally();
+    await _tryPushRecipe(recipe);
+  }
+
+  Future<void> setFavorite(Recipe recipe, bool isFavorite) async {
+    recipe.isFavorite = isFavorite;
+    recipe.updatedAt = DateTime.now();
+    await _datasource.updateRecipe(recipe);
+    _syncStatus.markSavedLocally();
+    await _tryPushRecipe(recipe);
+  }
+
+  Future<void> recordCooked(Recipe recipe) async {
+    final now = DateTime.now();
+    recipe.cookedAt = [...recipe.cookedAt, now];
+    recipe.updatedAt = now;
+    await _datasource.updateRecipe(recipe);
+    _syncStatus.markSavedLocally();
     await _tryPushRecipe(recipe);
   }
 
   Future<void> deleteRecipe(int id) async {
     final recipe = await getRecipe(id);
     await _datasource.deleteRecipe(id);
+    _syncStatus.markSavedLocally();
     if (recipe != null) {
       await _tryMarkRecipeDeleted(recipe);
     }
@@ -76,9 +103,11 @@ class RecipeRepository {
     if (user == null) return;
 
     try {
-      await _firestore.pushRecipe(user.uid, recipe);
-    } catch (error) {
-      print('Firestore recipe push failed: $error');
+      _syncStatus.markSyncing();
+      await _firestore.pushRecipe(user.uid, recipe, includePhotos: false);
+      _syncStatus.markSynced();
+    } catch (error, stackTrace) {
+      _syncStatus.markFailed(error, stackTrace);
     }
   }
 
@@ -87,9 +116,11 @@ class RecipeRepository {
     if (user == null) return;
 
     try {
+      _syncStatus.markSyncing();
       await _firestore.markRecipeDeleted(user.uid, recipe);
-    } catch (error) {
-      print('Firestore recipe tombstone failed: $error');
+      _syncStatus.markSynced();
+    } catch (error, stackTrace) {
+      _syncStatus.markFailed(error, stackTrace);
     }
   }
 }

@@ -1,5 +1,3 @@
-"""Hero image discovery from recipe source pages."""
-
 import re
 from html import unescape
 from urllib.parse import urljoin, urlparse

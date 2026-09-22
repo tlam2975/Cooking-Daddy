@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/recipe.dart';
@@ -52,9 +54,80 @@ class IsarDatasource {
     isar = await Isar.open([RecipeSchema, CategorySchema], directory: dir.path);
     print('IsarDatasource: Isar opened successfully!');
 
+    await repairMissingRecipeCloudIds();
+    await repairRecipePhotoPaths(dir.path);
     await _seedBuiltInCategories();
     await _addDefaultDataIfEmpty();
     print('IsarDatasource: Initialization complete!');
+  }
+
+  static Future<int> repairMissingRecipeCloudIds() async {
+    final recipes = await isar.recipes.where().findAll();
+    final missingIds = recipes
+        .where((recipe) => recipe.cloudId.trim().isEmpty)
+        .toList();
+    if (missingIds.isEmpty) return 0;
+
+    const uuid = Uuid();
+    await isar.writeTxn(() async {
+      for (final recipe in missingIds) {
+        recipe.cloudId = uuid.v4();
+        await isar.recipes.put(recipe);
+      }
+    });
+
+    print(
+      'IsarDatasource: Assigned cloud IDs to ${missingIds.length} '
+      'legacy recipes',
+    );
+    return missingIds.length;
+  }
+
+  static Future<int> repairRecipePhotoPaths(String documentsPath) async {
+    final recipes = await isar.recipes.where().findAll();
+    final changedRecipes = <Recipe>[];
+
+    for (final recipe in recipes) {
+      var changed = false;
+      final repairedSources = recipe.photoSources.map((source) {
+        final repaired = _rebasedPhotoPath(source, documentsPath);
+        if (repaired != source) changed = true;
+        return repaired;
+      }).toList();
+
+      if (changed) {
+        recipe.photoSources = repairedSources;
+        changedRecipes.add(recipe);
+      }
+    }
+
+    if (changedRecipes.isEmpty) return 0;
+    await isar.writeTxn(() async {
+      await isar.recipes.putAll(changedRecipes);
+    });
+    print(
+      'IsarDatasource: Repaired photo paths for '
+      '${changedRecipes.length} recipes',
+    );
+    return changedRecipes.length;
+  }
+
+  static String _rebasedPhotoPath(String source, String documentsPath) {
+    final uri = Uri.tryParse(source);
+    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+      return source;
+    }
+
+    final localPath = uri?.scheme == 'file' ? uri!.toFilePath() : source;
+    if (File(localPath).existsSync()) return localPath;
+
+    const marker = '/Documents/';
+    final markerIndex = localPath.indexOf(marker);
+    if (markerIndex < 0) return source;
+
+    final relativePath = localPath.substring(markerIndex + marker.length);
+    final candidate = '$documentsPath/$relativePath';
+    return File(candidate).existsSync() ? candidate : source;
   }
 
   // Seed built-in categories on first launch
@@ -262,6 +335,10 @@ class IsarDatasource {
 
   Future<List<Recipe>> getAllRecipes() async {
     return await isar.recipes.where().findAll();
+  }
+
+  Stream<List<Recipe>> watchAllRecipes() {
+    return isar.recipes.where().watch(fireImmediately: true);
   }
 
   Future<void> addRecipe(Recipe recipe) async {

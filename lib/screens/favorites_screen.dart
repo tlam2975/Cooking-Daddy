@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -5,6 +7,7 @@ import '../data/models/list_categories.dart';
 import '../data/models/recipe.dart';
 import '../data/repositories/recipe_repository.dart';
 import '../theme/app_theme.dart';
+import '../widgets/recipe_image.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -17,20 +20,22 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   final RecipeRepository _repository = RecipeRepository();
   List<Recipe> recipes = [];
   bool isLoading = true;
+  StreamSubscription<List<Recipe>>? _recipesSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
+    _watchFavorites();
   }
 
-  Future<void> _loadFavorites() async {
-    setState(() => isLoading = true);
-    final allRecipes = await _repository.getAllRecipes();
-    if (!mounted) return;
-    setState(() {
-      recipes = allRecipes.where((recipe) => recipe.isFavorite).toList();
-      isLoading = false;
+  void _watchFavorites() {
+    _recipesSubscription?.cancel();
+    _recipesSubscription = _repository.watchAllRecipes().listen((allRecipes) {
+      if (!mounted) return;
+      setState(() {
+        recipes = allRecipes.where((recipe) => recipe.isFavorite).toList();
+        isLoading = false;
+      });
     });
   }
 
@@ -43,18 +48,22 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     });
 
     try {
-      await _repository.updateRecipe(recipe);
+      await _repository.setFavorite(recipe, recipe.isFavorite);
     } catch (_) {
       if (!mounted) return;
       recipe.isFavorite = wasFavorite;
       recipe.updatedAt = DateTime.now();
-      await _loadFavorites();
     }
   }
 
   Future<void> _openRecipe(Recipe recipe) async {
     await Navigator.pushNamed(context, '/recipeDetail', arguments: recipe.id);
-    await _loadFavorites();
+  }
+
+  @override
+  void dispose() {
+    _recipesSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -103,7 +112,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                           ),
                           child: Row(
                             children: [
-                              _FavoriteThumb(imageUrl: recipe.imageUrl),
+                              RecipeImage(
+                                recipe: recipe,
+                                width: 64,
+                                height: 64,
+                                borderRadius: AppRadii.medium,
+                                fallbackIcon: Icons.menu_book_outlined,
+                              ),
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
@@ -143,42 +158,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _FavoriteThumb extends StatelessWidget {
-  final String? imageUrl;
-
-  const _FavoriteThumb({required this.imageUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    final url = imageUrl;
-    if (url != null && url.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: AppRadii.medium,
-        child: Image.network(
-          url,
-          width: 64,
-          height: 64,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _fallback(),
-        ),
-      );
-    }
-    return _fallback();
-  }
-
-  Widget _fallback() {
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        color: AppColors.primaryLight,
-        borderRadius: AppRadii.medium,
-      ),
-      child: Icon(Icons.menu_book_outlined, color: AppColors.primary),
     );
   }
 }

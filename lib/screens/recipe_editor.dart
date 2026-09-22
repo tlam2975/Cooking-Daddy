@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 import 'package:cooking_daddy/data/models/quotes.dart';
 import '../data/models/recipe.dart';
@@ -10,8 +11,10 @@ import '../services/gemini_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../data/models/list_categories.dart';
 import '../theme/app_theme.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import 'package:isar/isar.dart';
+import 'package:path_provider/path_provider.dart';
 
 class RecipeEditorScreen extends StatefulWidget {
   final Recipe? recipe;
@@ -28,9 +31,13 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   final TextEditingController _ingredientsController = TextEditingController();
   final TextEditingController _toolsController = TextEditingController();
   final TextEditingController _tagsController = TextEditingController();
+  final FocusNode _nameFocusNode = FocusNode();
+  final FocusNode _ingredientsFocusNode = FocusNode();
   final AIInterface _aiService = GeminiService();
+  final ImagePicker _imagePicker = ImagePicker();
   bool _isGenerating = false;
   String? _imageUrl;
+  List<String> _photoSources = [];
 
   late String randomQuote;
 
@@ -50,6 +57,11 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     _ingredientsController.dispose();
     _toolsController.dispose();
     _tagsController.dispose();
+    _nameFocusNode.dispose();
+    _ingredientsFocusNode.dispose();
+    for (final step in steps) {
+      step.dispose();
+    }
     super.dispose();
   }
 
@@ -62,7 +74,8 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   void _removeStep(int index) {
     if (steps.length > 1) {
       setState(() {
-        steps.removeAt(index);
+        final removed = steps.removeAt(index);
+        removed.dispose();
       });
     }
   }
@@ -121,12 +134,17 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
       _toolsController.text = _formatTools(recipe.tools);
       _tagsController.text = recipe.tags.join(', ');
       _imageUrl = recipe.imageUrl;
+      _photoSources = List<String>.from(recipe.photoSources);
 
       // Store KEY directly - NO context.locale!
       selectedCategoryKey = recipe.categoryKey;
       print('🔵 Set categoryKey to: $selectedCategoryKey');
 
       // Fill steps
+      for (final step in steps) {
+        step.dispose();
+      }
+
       steps = recipe.steps.map((step) {
         final stepData = StepData();
         stepData.instructionController.text = step.instruction;
@@ -162,39 +180,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     if (widget.recipe != null) {
       print('✅ Has recipe: ${widget.recipe!.name}');
 
-      // Pre-fill basic fields
-      _nameController.text = widget.recipe!.name;
-      _urlController.text = widget.recipe!.url ?? '';
-      _ingredientsController.text = _formatIngredients(
-        widget.recipe!.ingredients,
-      );
-      _toolsController.text = _formatTools(widget.recipe!.tools);
-      _tagsController.text = widget.recipe!.tags.join(', ');
-      _imageUrl = widget.recipe!.imageUrl;
-
-      // Store KEY - no context.locale!
-      selectedCategoryKey = widget.recipe!.categoryKey;
-
-      // Pre-fill steps
-      steps = widget.recipe!.steps.map((step) {
-        final stepData = StepData();
-        stepData.instructionController.text = step.instruction;
-        stepData.heatController.text = step.heat ?? '';
-        stepData.seasoningsController.text = step.seasonings ?? '';
-
-        if (step.timer != null) {
-          stepData.timerMinController.text = (step.timer! ~/ 60).toString();
-          stepData.timerSecController.text = (step.timer! % 60).toString();
-        }
-
-        stepData.notesController.text = step.notes ?? '';
-        stepData.lookForController.text = step.whatToLookFor;
-        return stepData;
-      }).toList();
-
-      if (steps.isEmpty) {
-        steps = [StepData()];
-      }
+      _fillFormWithRecipe(widget.recipe!);
     }
   }
 
@@ -405,14 +391,23 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    _buildHeroImagePreview(),
-                    if (_imageUrl != null && _imageUrl!.isNotEmpty)
-                      const SizedBox(height: 24),
+                    _buildPictureManager(),
+                    const SizedBox(height: 24),
 
-                    _buildTextField('${'name'.tr()}*', _nameController),
+                    _buildTextField(
+                      'name'.tr(),
+                      _nameController,
+                      isRequired: true,
+                      focusNode: _nameFocusNode,
+                    ),
                     const SizedBox(height: 16),
 
-                    _buildTextField('ingredients'.tr(), _ingredientsController),
+                    _buildTextField(
+                      'ingredients'.tr(),
+                      _ingredientsController,
+                      isRequired: true,
+                      focusNode: _ingredientsFocusNode,
+                    ),
                     const SizedBox(height: 16),
 
                     _buildTextField('tools'.tr(), _toolsController),
@@ -577,11 +572,9 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                           try {
                             // Validate
                             if (_nameController.text.trim().isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('pleaseEnterName'.tr()),
-                                  backgroundColor: Colors.red,
-                                ),
+                              _showValidationError(
+                                'pleaseEnterName',
+                                _nameFocusNode,
                               );
                               return;
                             }
@@ -596,19 +589,82 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                               return;
                             }
 
+                            final ingredients = _parseIngredients(
+                              _ingredientsController.text,
+                            );
+                            if (ingredients.isEmpty) {
+                              _showValidationError(
+                                'please_enter_ingredients',
+                                _ingredientsFocusNode,
+                              );
+                              return;
+                            }
+
+                            final invalidStepIndex = steps.indexWhere(
+                              (step) => step.instructionController.text
+                                  .trim()
+                                  .isEmpty,
+                            );
+                            if (invalidStepIndex != -1) {
+                              _showValidationError(
+                                'please_enter_step',
+                                steps[invalidStepIndex].instructionFocusNode,
+                              );
+                              return;
+                            }
+
+                            final recipeSteps = steps.map((stepData) {
+                              final timerMin =
+                                  int.tryParse(
+                                    stepData.timerMinController.text,
+                                  ) ??
+                                  0;
+                              final timerSec =
+                                  int.tryParse(
+                                    stepData.timerSecController.text,
+                                  ) ??
+                                  0;
+                              final totalSeconds = (timerMin * 60) + timerSec;
+
+                              return Step(
+                                instruction: stepData.instructionController.text
+                                    .trim(),
+                                heat:
+                                    stepData.heatController.text.trim().isEmpty
+                                    ? null
+                                    : stepData.heatController.text.trim(),
+                                seasonings:
+                                    stepData.seasoningsController.text
+                                        .trim()
+                                        .isEmpty
+                                    ? null
+                                    : stepData.seasoningsController.text.trim(),
+                                timer: totalSeconds > 0 ? totalSeconds : null,
+                                notes:
+                                    stepData.notesController.text.trim().isEmpty
+                                    ? null
+                                    : stepData.notesController.text.trim(),
+                                whatToLookFor: stepData.lookForController.text
+                                    .trim(),
+                                index: steps.indexOf(stepData),
+                              );
+                            }).toList();
+
                             // Create recipe
                             final now = DateTime.now();
                             final recipe = Recipe(
                               cloudId:
-                                  widget.recipe?.cloudId ?? const Uuid().v4(),
+                                  widget.recipe?.cloudId.trim().isNotEmpty ==
+                                      true
+                                  ? widget.recipe!.cloudId.trim()
+                                  : const Uuid().v4(),
                               name: _nameController.text.trim(),
                               url: _urlController.text.trim().isEmpty
                                   ? null
                                   : _urlController.text.trim(),
                               imageUrl: _imageUrl,
-                              ingredients: _parseIngredients(
-                                _ingredientsController.text,
-                              ),
+                              photoSources: _photoSources,
+                              ingredients: ingredients,
                               tools: _parseTools(_toolsController.text),
                               categoryKey: selectedCategoryKey!, // Use KEY
                               createdDate: widget.recipe?.createdDate ?? now,
@@ -616,52 +672,11 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                               basePortions: widget.recipe?.basePortions ?? 1,
                               isFavorite: widget.recipe?.isFavorite ?? false,
                               isSeed: widget.recipe?.isSeed ?? false,
+                              cookedAt: widget.recipe?.cookedAt ?? const [],
                               sourceRecipeId: widget.recipe?.sourceRecipeId,
                               energyNote: widget.recipe?.energyNote,
                               tags: _parseTags(_tagsController.text),
-                              steps: steps.map((stepData) {
-                                final timerMin =
-                                    int.tryParse(
-                                      stepData.timerMinController.text,
-                                    ) ??
-                                    0;
-                                final timerSec =
-                                    int.tryParse(
-                                      stepData.timerSecController.text,
-                                    ) ??
-                                    0;
-                                final totalSeconds = (timerMin * 60) + timerSec;
-
-                                return Step(
-                                  instruction: stepData
-                                      .instructionController
-                                      .text
-                                      .trim(),
-                                  heat:
-                                      stepData.heatController.text
-                                          .trim()
-                                          .isEmpty
-                                      ? null
-                                      : stepData.heatController.text.trim(),
-                                  seasonings:
-                                      stepData.seasoningsController.text
-                                          .trim()
-                                          .isEmpty
-                                      ? null
-                                      : stepData.seasoningsController.text
-                                            .trim(),
-                                  timer: totalSeconds > 0 ? totalSeconds : null,
-                                  notes:
-                                      stepData.notesController.text
-                                          .trim()
-                                          .isEmpty
-                                      ? null
-                                      : stepData.notesController.text.trim(),
-                                  whatToLookFor: stepData.lookForController.text
-                                      .trim(),
-                                  index: steps.indexOf(stepData),
-                                );
-                              }).toList(),
+                              steps: recipeSteps,
                             );
 
                             if (widget.recipe != null &&
@@ -736,10 +751,28 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     );
   }
 
+  void _showValidationError(String messageKey, FocusNode focusNode) {
+    focusNode.requestFocus();
+    final fieldContext = focusNode.context;
+    if (fieldContext != null) {
+      Scrollable.ensureVisible(
+        fieldContext,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOut,
+        alignment: 0.2,
+      );
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(messageKey.tr()), backgroundColor: Colors.red),
+    );
+  }
+
   Widget _buildTextField(
     String label,
     TextEditingController controller, {
     bool isRequired = false,
+    FocusNode? focusNode,
   }) {
     return Row(
       children: [
@@ -772,6 +805,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
             ),
             child: TextField(
               controller: controller,
+              focusNode: focusNode,
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(vertical: 8),
@@ -783,33 +817,297 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     );
   }
 
-  Widget _buildHeroImagePreview() {
+  Widget _buildPictureManager() {
+    final canAddPhoto = _photoSources.length < 3;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadii.large,
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.soft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'pictures'.tr(),
+                  style: AppTextStyles.sectionTitle.copyWith(fontSize: 18),
+                ),
+              ),
+              Text(
+                'photo_count'.tr(args: ['${_photoSources.length}', '3']),
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: 'take_picture'.tr(),
+                onPressed: canAddPhoto ? _takePicture : null,
+                icon: const Icon(Icons.add_a_photo_outlined),
+                style: IconButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  backgroundColor: AppColors.primaryLight,
+                ),
+              ),
+            ],
+          ),
+          if (_photoSources.isEmpty) ...[
+            const SizedBox(height: 8),
+            _buildUrlImagePreview(),
+          ] else ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 108,
+              child: ReorderableListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _photoSources.length,
+                onReorder: _reorderPhoto,
+                itemBuilder: (context, index) {
+                  final source = _photoSources[index];
+                  return Padding(
+                    key: ValueKey(source),
+                    padding: const EdgeInsets.only(right: 10),
+                    child: Stack(
+                      children: [
+                        ReorderableDelayedDragStartListener(
+                          index: index,
+                          child: ClipRRect(
+                            borderRadius: AppRadii.medium,
+                            child: _buildPhoto(source),
+                          ),
+                        ),
+                        Positioned(
+                          top: 6,
+                          left: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.58),
+                              borderRadius: AppRadii.small,
+                            ),
+                            child: Text(
+                              index == 0 ? 'thumbnail'.tr() : '${index + 1}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: IconButton.filled(
+                            visualDensity: VisualDensity.compact,
+                            iconSize: 16,
+                            tooltip: 'remove_picture'.tr(),
+                            onPressed: () => _removePhoto(index),
+                            icon: const Icon(Icons.close),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black.withOpacity(0.58),
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(30, 30),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: 6,
+                          bottom: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.58),
+                              borderRadius: AppRadii.small,
+                            ),
+                            child: Text(
+                              _isRemoteSource(source)
+                                  ? 'photo_cloud_copy'.tr()
+                                  : 'photo_stored_on_device'.tr(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 6,
+                          bottom: 6,
+                          child: ReorderableDelayedDragStartListener(
+                            index: index,
+                            child: Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.58),
+                                borderRadius: AppRadii.small,
+                              ),
+                              child: const Icon(
+                                Icons.drag_handle,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUrlImagePreview() {
     final imageUrl = _imageUrl;
     if (imageUrl == null || imageUrl.isEmpty) {
-      return const SizedBox.shrink();
+      return Container(
+        height: 96,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.primaryLight,
+          borderRadius: AppRadii.medium,
+        ),
+        child: Icon(
+          Icons.add_photo_alternate_outlined,
+          color: AppColors.primary,
+        ),
+      );
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: AppRadii.medium,
       child: Image.network(
         imageUrl,
         width: double.infinity,
-        height: 180,
+        height: 140,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           return Container(
             height: 96,
             alignment: Alignment.center,
-            color: AppColors.surface,
+            color: AppColors.primaryLight,
             child: Icon(
               Icons.image_not_supported_outlined,
               size: 32,
-              color: AppColors.textSecondary,
+              color: AppColors.primary,
             ),
           );
         },
       ),
     );
+  }
+
+  Widget _buildPhoto(String source) {
+    if (_isRemoteSource(source)) {
+      return Image.network(
+        source,
+        width: 108,
+        height: 108,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _photoFallback(),
+      );
+    }
+
+    return Image.file(
+      File(source),
+      width: 108,
+      height: 108,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => _photoFallback(),
+    );
+  }
+
+  Widget _photoFallback() {
+    return Container(
+      width: 108,
+      height: 108,
+      color: AppColors.primaryLight,
+      child: Icon(Icons.broken_image_outlined, color: AppColors.primary),
+    );
+  }
+
+  Future<void> _takePicture() async {
+    if (_photoSources.length >= 3) return;
+
+    try {
+      final pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 84,
+        maxWidth: 1600,
+      );
+      if (pickedFile == null) return;
+
+      final savedPath = await _copyPhotoIntoAppStorage(pickedFile.path);
+      if (!mounted) return;
+      setState(() => _photoSources = [..._photoSources, savedPath]);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('camera_unavailable'.tr())));
+    }
+  }
+
+  Future<String> _copyPhotoIntoAppStorage(String sourcePath) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final photosDir = Directory('${directory.path}/recipe_photos');
+    if (!photosDir.existsSync()) {
+      photosDir.createSync(recursive: true);
+    }
+
+    final sourceExtension = sourcePath.split('.').last.toLowerCase();
+    const supportedExtensions = {'jpg', 'jpeg', 'png', 'webp', 'heic'};
+    final extension = supportedExtensions.contains(sourceExtension)
+        ? sourceExtension
+        : 'jpg';
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final fileName = 'recipe_$timestamp.$extension';
+    final savedFile = await File(
+      sourcePath,
+    ).copy('${photosDir.path}/$fileName');
+    return savedFile.path;
+  }
+
+  void _reorderPhoto(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) newIndex -= 1;
+      final updated = List<String>.from(_photoSources);
+      final source = updated.removeAt(oldIndex);
+      updated.insert(newIndex, source);
+      _photoSources = updated;
+    });
+  }
+
+  void _removePhoto(int index) {
+    setState(() {
+      final updated = List<String>.from(_photoSources)..removeAt(index);
+      _photoSources = updated;
+    });
+  }
+
+  bool _isRemoteSource(String source) {
+    final uri = Uri.tryParse(source);
+    return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
   }
 
   Widget _buildStepCard(int index) {
@@ -846,6 +1144,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
           _buildStepField(
             'instruction'.tr(),
             steps[index].instructionController,
+            focusNode: steps[index].instructionFocusNode,
           ),
           const SizedBox(height: 8),
           _buildStepField('heat'.tr(), steps[index].heatController),
@@ -896,7 +1195,11 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
     );
   }
 
-  Widget _buildStepField(String label, TextEditingController controller) {
+  Widget _buildStepField(
+    String label,
+    TextEditingController controller, {
+    FocusNode? focusNode,
+  }) {
     return Row(
       children: [
         SizedBox(
@@ -915,6 +1218,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
             ),
             child: TextField(
               controller: controller,
+              focusNode: focusNode,
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(vertical: 4),
@@ -1028,6 +1332,7 @@ class StepData {
   final TextEditingController timerSecController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
   final TextEditingController lookForController = TextEditingController();
+  final FocusNode instructionFocusNode = FocusNode();
 
   void dispose() {
     instructionController.dispose();
@@ -1037,5 +1342,6 @@ class StepData {
     timerSecController.dispose();
     notesController.dispose();
     lookForController.dispose();
+    instructionFocusNode.dispose();
   }
 }
