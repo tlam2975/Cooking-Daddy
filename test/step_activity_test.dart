@@ -48,21 +48,21 @@ void main() {
     );
   });
 
-  test('running timer and completion override the base activity', () {
-    final step = Step(
-      instruction: 'Stir the sauce',
-      activityType: StepActivityType.mix,
-    );
+  test(
+    'timer state keeps the primary activity and completion overrides it',
+    () {
+      final step = Step(
+        instruction: 'Stir the sauce',
+        activityType: StepActivityType.mix,
+      );
 
-    expect(
-      StepActivityResolver.effective(step, timerRunning: true),
-      StepActivityType.timer,
-    );
-    expect(
-      StepActivityResolver.effective(step, completed: true),
-      StepActivityType.complete,
-    );
-  });
+      expect(StepActivityResolver.effective(step), StepActivityType.mix);
+      expect(
+        StepActivityResolver.effective(step, completed: true),
+        StepActivityType.complete,
+      );
+    },
+  );
 
   test('timed unknown steps use timer and other unknown steps use prep', () {
     expect(

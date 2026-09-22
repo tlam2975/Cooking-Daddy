@@ -176,11 +176,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
       stepIndex: stepNumber,
       totalSteps: widget.recipe.steps.length,
       instruction: completed ? 'done'.tr() : step!.instruction,
-      activityType: StepActivityResolver.effective(
-        step,
-        timerRunning: _timerService.isRunning,
-        completed: completed,
-      ),
+      activityType: StepActivityResolver.effective(step, completed: completed),
       timerEnd: _timerService.isRunning
           ? DateTime.now().add(
               Duration(seconds: _timerService.remainingSeconds),
@@ -381,7 +377,6 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                           const SizedBox(width: 12),
                           _CookingActivityIcon(
                             step: currentStep,
-                            timerRunning: _timerService.isRunning,
                             completed: isLastStep,
                           ),
                         ],
@@ -812,14 +807,9 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
 
 class _CookingActivityIcon extends StatelessWidget {
   final Step? step;
-  final bool timerRunning;
   final bool completed;
 
-  const _CookingActivityIcon({
-    required this.step,
-    required this.timerRunning,
-    required this.completed,
-  });
+  const _CookingActivityIcon({required this.step, required this.completed});
 
   @override
   Widget build(BuildContext context) {
@@ -848,11 +838,7 @@ class _CookingActivityIcon extends StatelessWidget {
   }
 
   IconData get _icon {
-    switch (StepActivityResolver.effective(
-      step,
-      timerRunning: timerRunning,
-      completed: completed,
-    )) {
+    switch (StepActivityResolver.effective(step, completed: completed)) {
       case StepActivityType.prep:
         return Icons.soup_kitchen_outlined;
       case StepActivityType.chop:

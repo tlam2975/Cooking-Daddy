@@ -15,13 +15,8 @@ class StepActivityResolver {
         );
   }
 
-  static StepActivityType effective(
-    Step? step, {
-    bool timerRunning = false,
-    bool completed = false,
-  }) {
+  static StepActivityType effective(Step? step, {bool completed = false}) {
     if (completed) return StepActivityType.complete;
-    if (timerRunning) return StepActivityType.timer;
     if (step == null) return StepActivityType.prep;
     return resolve(step);
   }

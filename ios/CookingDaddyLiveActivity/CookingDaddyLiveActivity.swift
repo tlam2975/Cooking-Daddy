@@ -163,7 +163,7 @@ private struct CookingProgressView: View {
 
   var body: some View {
     GeometryReader { geometry in
-      let thumbSize = 22.0
+      let thumbSize = 30.0
       let availableWidth = max(0, geometry.size.width - thumbSize)
       let thumbOffset = availableWidth * progress
 
@@ -179,11 +179,13 @@ private struct CookingProgressView: View {
           .padding(.leading, thumbSize / 2)
 
         ZStack {
-          Circle().fill(thumbBackground)
+          Circle()
+            .fill(thumbBackground)
+            .shadow(color: iconColor.opacity(0.22), radius: 2, y: 1)
           CookingActivityIcon(
             activityType: state.activityType,
             color: iconColor,
-            size: 13
+            size: 18
           )
           .id(state.activityType)
           .transition(.scale.combined(with: .opacity))
