@@ -9,6 +9,8 @@ import 'theme_controller.dart';
 class AppColors {
   AppColors._();
 
+  static const brandPink = Color(0xFFFFA4A4);
+
   static AppColorScheme get _current => ThemeController.instance.colors;
 
   static Color get primary => _current.primary;
@@ -26,7 +28,7 @@ class AppTextStyles {
   AppTextStyles._();
 
   static TextStyle get greeting => GoogleFonts.beVietnamPro(
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
   );
@@ -61,7 +63,7 @@ class AppRadii {
 
   static BorderRadius get small => BorderRadius.circular(8);
   static BorderRadius get medium => BorderRadius.circular(12);
-  static BorderRadius get large => BorderRadius.circular(16);
+  static BorderRadius get large => BorderRadius.circular(14);
 }
 
 class AppShadows {
@@ -70,8 +72,8 @@ class AppShadows {
   static List<BoxShadow> get soft => [
     BoxShadow(
       color: Colors.black.withValues(alpha: 0.06),
-      blurRadius: 18,
-      offset: const Offset(0, 8),
+      blurRadius: 12,
+      offset: const Offset(0, 4),
     ),
   ];
 }
@@ -108,9 +110,8 @@ class AppTheme {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadii.medium),
+          elevation: 0,
           textStyle: AppTextStyles.cardTitle.copyWith(color: Colors.white),
         ),
       ),
@@ -149,13 +150,43 @@ class AppTheme {
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.primary, width: 2),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
         ),
-        enabledBorder: UnderlineInputBorder(
+        focusedBorder: OutlineInputBorder(
+          borderRadius: AppRadii.medium,
+          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: AppRadii.medium,
           borderSide: BorderSide(color: AppColors.border),
         ),
+        border: OutlineInputBorder(borderRadius: AppRadii.medium),
         labelStyle: AppTextStyles.caption,
+      ),
+      cardTheme: CardThemeData(
+        color: AppColors.surface,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadii.large,
+          side: BorderSide(color: AppColors.border),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.textPrimary,
+        contentTextStyle: AppTextStyles.body.copyWith(color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: AppRadii.medium),
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        },
       ),
     );
   }

@@ -73,9 +73,29 @@ class _MainShellState extends State<MainShell> {
           body: Column(
             children: [
               Expanded(
-                child: IndexedStack(
-                  index: navigation.selectedTabIndex,
-                  children: tabs,
+                child: Stack(
+                  children: List.generate(tabs.length, (index) {
+                    final selected = navigation.selectedTabIndex == index;
+                    return Positioned.fill(
+                      child: IgnorePointer(
+                        ignoring: !selected,
+                        child: TickerMode(
+                          enabled: selected,
+                          child: AnimatedOpacity(
+                            opacity: selected ? 1 : 0,
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOut,
+                            child: AnimatedScale(
+                              scale: selected ? 1 : 0.99,
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeOut,
+                              child: tabs[index],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
                 ),
               ),
               _SyncStatusBar(onRetry: _retrySync),
@@ -94,11 +114,17 @@ class _MainShellState extends State<MainShell> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border)),
-        boxShadow: AppShadows.soft,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: SafeArea(
         child: SizedBox(
-          height: 70,
+          height: 66,
           child: Row(
             children: [
               _NavItem(
@@ -247,33 +273,37 @@ class _NavItem extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: AppRadii.medium,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            decoration: BoxDecoration(
-              color: selected ? AppColors.primaryLight : Colors.transparent,
-              borderRadius: AppRadii.medium,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(selected ? activeIcon : icon, color: color, size: 23),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.caption.copyWith(
-                    color: color,
-                    fontSize: 11,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                  ),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: selected ? 34 : 30,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.primaryLight : Colors.transparent,
+                  borderRadius: AppRadii.small,
                 ),
-              ],
-            ),
+                child: Icon(
+                  selected ? activeIcon : icon,
+                  color: color,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
+                  color: color,
+                  fontSize: 10.5,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),

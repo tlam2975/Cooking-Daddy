@@ -23,6 +23,7 @@ class NotificationService {
     const initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
+      macOS: initializationSettingsIOS,
     );
 
     await _notifications.initialize(initializationSettings);

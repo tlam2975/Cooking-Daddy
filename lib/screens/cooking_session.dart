@@ -3,13 +3,13 @@ import 'package:flutter/material.dart' hide Step;
 import 'dart:math';
 import 'dart:async';
 import '../data/models/recipe.dart';
-import '../data/models/quotes.dart';
 import '../data/repositories/recipe_repository.dart';
 import 'package:flutter/services.dart';
 import '../services/app_navigation_controller.dart';
 import '../services/notification.dart';
 import '../services/timer.dart';
 import '../theme/app_theme.dart';
+import '../widgets/recipe_image.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
 
 class CookingSessionScreen extends StatefulWidget {
@@ -22,7 +22,6 @@ class CookingSessionScreen extends StatefulWidget {
 }
 
 class _CookingSessionScreenState extends State<CookingSessionScreen> {
-  late String randomQuote;
   int currentStepIndex = 0;
   final TimerService _timerService = TimerService();
   final RecipeRepository _repository = RecipeRepository();
@@ -40,9 +39,6 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
   @override
   void initState() {
     super.initState();
-
-    // Initialize random quote
-    randomQuote = cookingQuotes[Random().nextInt(cookingQuotes.length)];
 
     // Initialize proximity sensor
     _initProximitySensor();
@@ -281,71 +277,101 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            bottom: false,
-            left: false,
-            right: false,
             child: Column(
               children: [
-                // Header
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     border: Border(bottom: BorderSide(color: AppColors.border)),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Stack(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 16, 12),
+                  child: Column(
                     children: [
-                      // Back button
-                      Positioned(
-                        left: 16,
-                        top: 0,
-                        bottom: 0,
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.arrow_back,
-                            size: 32,
-                            color: AppColors.textPrimary,
+                      Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'back'.tr(),
+                            icon: const Icon(Icons.arrow_back),
+                            onPressed: () {
+                              stopTimer();
+                              Navigator.pop(context);
+                            },
                           ),
-                          onPressed: () {
-                            stopTimer();
-                            Navigator.pop(context);
-                          },
-                        ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.recipe.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.cardTitle.copyWith(
+                                    fontSize: 17,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  isLastStep
+                                      ? 'done'.tr()
+                                      : '${'step'.tr()} ${currentStepIndex + 1} / ${widget.recipe.steps.length}',
+                                  style: AppTextStyles.caption,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _CookingActivityIcon(
+                            step: currentStep,
+                            timerRunning: _timerService.isRunning,
+                            completed: isLastStep,
+                          ),
+                        ],
                       ),
-                      // Title
-                      Center(
-                        child: Column(
-                          children: [
-                            Text(
-                              'Cooking Daddy',
-                              style: AppTextStyles.greeting.copyWith(
-                                fontSize: 30,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            Text(
-                              randomQuote,
-                              style: AppTextStyles.body.copyWith(
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                          ],
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: AppRadii.small,
+                        child: LinearProgressIndicator(
+                          minHeight: 4,
+                          value: isLastStep
+                              ? 1
+                              : (currentStepIndex + 1) /
+                                    widget.recipe.steps.length,
+                          backgroundColor: AppColors.primaryLight,
+                          valueColor: AlwaysStoppedAnimation(AppColors.primary),
                         ),
                       ),
                     ],
                   ),
                 ),
-                // Content with proximity overlay
                 Expanded(
                   child: Stack(
                     children: [
-                      // Main content
-                      isLastStep
-                          ? _buildCompletionScreen()
-                          : _buildStepScreen(currentStep!),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 240),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        transitionBuilder: (child, animation) {
+                          final offset = Tween<Offset>(
+                            begin: const Offset(0.025, 0),
+                            end: Offset.zero,
+                          ).animate(animation);
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: offset,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: KeyedSubtree(
+                          key: ValueKey(currentStepIndex),
+                          child: isLastStep
+                              ? _buildCompletionScreen()
+                              : _buildStepScreen(currentStep!),
+                        ),
+                      ),
 
                       // Proximity hint overlay
                       if (_proximityEnabled && _showProximityHint)
@@ -360,8 +386,10 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                                 vertical: 12,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.8),
-                                borderRadius: BorderRadius.circular(30),
+                                color: AppColors.textPrimary.withValues(
+                                  alpha: 0.92,
+                                ),
+                                borderRadius: AppRadii.medium,
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -373,7 +401,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                                   ),
                                   SizedBox(height: 8),
                                   Text(
-                                    '👋 Wave hand to continue',
+                                    'wave_to_continue'.tr(),
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 16,
@@ -386,7 +414,9 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                                     width: 200,
                                     height: 8,
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.3),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.3,
+                                      ),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: FractionallySizedBox(
@@ -418,11 +448,6 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                     ],
                   ),
                 ),
-                // Footer
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text('copyright'.tr(), style: AppTextStyles.caption),
-                ),
               ],
             ),
           ),
@@ -437,240 +462,201 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
     final hasTimer = step.timer != null && step.timer! > 0;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Recipe Name
-          Text(
-            widget.recipe.name,
-            style: AppTextStyles.greeting.copyWith(fontSize: 30),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 40),
-
-          // Step Instruction
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
+          LayoutBuilder(
+            builder: (context, constraints) => RecipeImage(
+              recipe: widget.recipe,
+              width: constraints.maxWidth,
+              height: 164,
               borderRadius: AppRadii.large,
-              border: Border.all(color: AppColors.border),
-              boxShadow: AppShadows.soft,
-            ),
-            child: Text(
-              step.instruction,
-              style: AppTextStyles.body.copyWith(fontSize: 18, height: 1.5),
-              textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 22),
+          Text(
+            '${'step'.tr()} ${currentStepIndex + 1}',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            step.instruction,
+            style: AppTextStyles.greeting.copyWith(fontSize: 25, height: 1.35),
+          ),
+          const SizedBox(height: 24),
 
-          // Heat
           if (step.heat != null && step.heat!.isNotEmpty) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: AppRadii.large,
-                border: Border.all(color: AppColors.border, width: 1),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.local_fire_department, color: AppColors.primary),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('heat'.tr(), style: AppTextStyles.caption),
-                      Text(
-                        step.heat!,
-                        style: AppTextStyles.cardTitle.copyWith(fontSize: 18),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            _buildStepDetail(
+              icon: Icons.local_fire_department_outlined,
+              label: 'heat'.tr(),
+              value: step.heat!,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
           ],
 
-          // Seasonings
           if (step.seasonings != null && step.seasonings!.isNotEmpty) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: AppRadii.large,
-                border: Border.all(color: AppColors.border, width: 1),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.restaurant, color: AppColors.primary),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('seasonings'.tr(), style: AppTextStyles.caption),
-                      Text(
-                        step.seasonings!,
-                        style: AppTextStyles.cardTitle.copyWith(fontSize: 18),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            _buildStepDetail(
+              icon: Icons.restaurant_outlined,
+              label: 'seasonings'.tr(),
+              value: step.seasonings!,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
           ],
 
-          // Timer
           if (hasTimer) ...[
-            Text(
-              'timer'.tr(),
-              style: AppTextStyles.sectionTitle.copyWith(fontSize: 24),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 4),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: Color.alphaBlend(
+                  AppColors.brandPink.withValues(alpha: 0.36),
+                  AppColors.surface,
+                ),
                 borderRadius: AppRadii.large,
-                border: Border.all(color: AppColors.border),
               ),
-              child: Text(
-                _timerService.isRunning
-                    ? formatTime(_timerService.remainingSeconds)
-                    : formatTime(step.timer!),
-                style: AppTextStyles.greeting.copyWith(fontSize: 48),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 104,
+                    height: 104,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox.expand(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 7,
+                            strokeCap: StrokeCap.round,
+                            value: _timerService.isRunning
+                                ? _timerService.remainingSeconds / step.timer!
+                                : 1,
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.7,
+                            ),
+                            valueColor: AlwaysStoppedAnimation(
+                              AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          _timerService.isRunning
+                              ? formatTime(_timerService.remainingSeconds)
+                              : formatTime(step.timer!),
+                          style: AppTextStyles.sectionTitle.copyWith(
+                            fontSize: 21,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'timer'.tr(),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        FilledButton.icon(
+                          onPressed: _timerService.isRunning
+                              ? stopTimer
+                              : () => startTimer(step.timer!),
+                          icon: Icon(
+                            _timerService.isRunning
+                                ? Icons.stop_rounded
+                                : Icons.play_arrow_rounded,
+                          ),
+                          label: Text(
+                            _timerService.isRunning
+                                ? 'stopTimer'.tr()
+                                : 'startTimer'.tr(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            if (!_timerService.isRunning)
-              ElevatedButton(
-                onPressed: () => startTimer(step.timer!),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: Text('startTimer'.tr()),
-              ),
-            if (_timerService.isRunning)
-              ElevatedButton(
-                onPressed: stopTimer,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[400],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: Text('stopTimer'.tr()),
-              ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
           ],
 
-          // What to look for
           if (step.whatToLookFor.isNotEmpty) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: AppRadii.large,
-                border: Border.all(color: AppColors.border, width: 1),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.visibility, color: AppColors.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('until_it_is'.tr(), style: AppTextStyles.caption),
-                        Text(
-                          step.whatToLookFor,
-                          style: AppTextStyles.body.copyWith(height: 1.4),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            _buildStepDetail(
+              icon: Icons.visibility_outlined,
+              label: 'until_it_is'.tr(),
+              value: step.whatToLookFor,
+              highlighted: true,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
           ],
 
-          // Notes
           if (step.notes != null && step.notes!.isNotEmpty) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: AppRadii.large,
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.note, color: AppColors.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('notes'.tr(), style: AppTextStyles.caption),
-                        Text(
-                          step.notes!,
-                          style: AppTextStyles.body.copyWith(height: 1.4),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            _buildStepDetail(
+              icon: Icons.sticky_note_2_outlined,
+              label: 'notes'.tr(),
+              value: step.notes!,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
           ],
 
-          // Done Button
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
+            child: FilledButton.icon(
               onPressed: nextStep,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                elevation: 2,
-              ),
-              child: Text(
+              icon: const Icon(Icons.arrow_forward),
+              iconAlignment: IconAlignment.end,
+              label: Text(
                 'done'.tr(),
                 style: AppTextStyles.cardTitle.copyWith(
                   color: Colors.white,
-                  fontSize: 22,
+                  fontSize: 17,
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepDetail({
+    required IconData icon,
+    required String label,
+    required String value,
+    bool highlighted = false,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: highlighted ? AppColors.primaryLight : AppColors.surface,
+        borderRadius: AppRadii.medium,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.primary, size: 21),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: AppTextStyles.caption),
+                const SizedBox(height: 3),
+                Text(value, style: AppTextStyles.body.copyWith(height: 1.4)),
+              ],
             ),
           ),
         ],
@@ -695,6 +681,20 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      color: AppColors.brandPink,
+                      borderRadius: AppRadii.large,
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 36,
+                      color: Color(0xFF4B272D),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
@@ -725,28 +725,20 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 36),
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
+                    child: FilledButton.icon(
                       onPressed: () {
                         AppNavigationController.instance.selectDashboard();
                         Navigator.popUntil(context, (route) => route.isFirst);
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        elevation: 2,
-                      ),
-                      child: Text(
+                      icon: const Icon(Icons.home_outlined),
+                      label: Text(
                         'back_to_home'.tr(),
                         style: AppTextStyles.cardTitle.copyWith(
                           color: Colors.white,
-                          fontSize: 22,
+                          fontSize: 17,
                         ),
                       ),
                     ),
@@ -758,5 +750,54 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
         );
       },
     );
+  }
+}
+
+class _CookingActivityIcon extends StatelessWidget {
+  final Step? step;
+  final bool timerRunning;
+  final bool completed;
+
+  const _CookingActivityIcon({
+    required this.step,
+    required this.timerRunning,
+    required this.completed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = _icon;
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.brandPink,
+        borderRadius: AppRadii.medium,
+      ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 280),
+        transitionBuilder: (child, animation) => ScaleTransition(
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: animation, child: child),
+        ),
+        child: Icon(
+          icon,
+          key: ValueKey(icon),
+          color: const Color(0xFF4B272D),
+          size: 23,
+        ),
+      ),
+    );
+  }
+
+  IconData get _icon {
+    if (completed) return Icons.check_rounded;
+    if (timerRunning) return Icons.timer_outlined;
+    if (step?.timer != null && step!.timer! > 0) return Icons.hourglass_empty;
+    if (step?.heat?.isNotEmpty ?? false) {
+      return Icons.local_fire_department_outlined;
+    }
+    if (step?.seasonings?.isNotEmpty ?? false) return Icons.restaurant_outlined;
+    return Icons.soup_kitchen_outlined;
   }
 }

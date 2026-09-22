@@ -79,16 +79,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildHeader(),
             const SizedBox(height: 18),
             _buildSearchBar(context),
-            const SizedBox(height: 18),
+            const SizedBox(height: 28),
+            Text('todays_suggestion'.tr(), style: AppTextStyles.sectionTitle),
+            const SizedBox(height: 12),
+            _buildSuggestions(),
+            const SizedBox(height: 28),
             _buildStatsPanel(),
             const SizedBox(height: 28),
             Text('recently_cooked'.tr(), style: AppTextStyles.sectionTitle),
             const SizedBox(height: 12),
             _buildRecentlyCooked(),
-            const SizedBox(height: 28),
-            Text('todays_suggestion'.tr(), style: AppTextStyles.sectionTitle),
-            const SizedBox(height: 12),
-            _buildSuggestions(),
           ],
         ),
       ),
@@ -106,7 +106,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: AppColors.surface,
         borderRadius: AppRadii.large,
         border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,8 +116,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
             childAspectRatio: 1.8,
             children: [
               _StatTile(
@@ -173,27 +172,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildHeader() {
-    final displayName = FirebaseAuth.instance.currentUser?.displayName?.trim();
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName = user?.displayName?.trim();
     final greeting = displayName == null || displayName.isEmpty
         ? 'greeting_hello'.tr()
         : 'greeting_user'.tr(namedArgs: {'username': displayName});
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight,
-            borderRadius: AppRadii.medium,
-          ),
-          child: Icon(Icons.soup_kitchen_outlined, color: AppColors.primary),
-        ),
-        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                'Cooking Daddy',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
               Text(
                 greeting,
                 maxLines: 2,
@@ -210,6 +209,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
         ),
+        const SizedBox(width: 12),
+        CircleAvatar(
+          radius: 23,
+          backgroundColor: AppColors.primaryLight,
+          foregroundImage: user?.photoURL == null
+              ? null
+              : NetworkImage(user!.photoURL!),
+          child: user?.photoURL == null
+              ? Icon(Icons.person_outline, color: AppColors.primary)
+              : null,
+        ),
       ],
     );
   }
@@ -224,7 +234,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           color: AppColors.surface,
           borderRadius: AppRadii.large,
           border: Border.all(color: AppColors.border),
-          boxShadow: AppShadows.soft,
         ),
         child: Row(
           children: [
@@ -274,15 +283,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
+    final featured = _suggestions.first;
+    final remaining = _suggestions.skip(1);
     return Column(
-      children: _suggestions
-          .map(
-            (recipe) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _SuggestionCard(recipe: recipe),
-            ),
-          )
-          .toList(),
+      children: [
+        _SuggestionCard(recipe: featured, featured: true),
+        ...remaining.map(
+          (recipe) => Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: _SuggestionCard(recipe: recipe),
+          ),
+        ),
+      ],
     );
   }
 
@@ -309,18 +321,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    return Column(
-      children: _recentlyCooked
-          .map(
-            (recipe) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _SuggestionCard(
-                recipe: recipe,
-                subtitle: _lastCookedLabel(recipe),
-              ),
+    return SizedBox(
+      height: 108,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _recentlyCooked.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final recipe = _recentlyCooked[index];
+          return SizedBox(
+            width: 270,
+            child: _SuggestionCard(
+              recipe: recipe,
+              subtitle: _lastCookedLabel(recipe),
             ),
-          )
-          .toList(),
+          );
+        },
+      ),
     );
   }
 
@@ -390,12 +407,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
 class _SuggestionCard extends StatelessWidget {
   final Recipe recipe;
   final String? subtitle;
+  final bool featured;
 
-  const _SuggestionCard({required this.recipe, this.subtitle});
+  const _SuggestionCard({
+    required this.recipe,
+    this.subtitle,
+    this.featured = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final stepCount = recipe.steps.length;
+    if (featured) {
+      return InkWell(
+        borderRadius: AppRadii.large,
+        onTap: () {
+          Navigator.pushNamed(context, '/recipeDetail', arguments: recipe.id);
+        },
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: AppRadii.large,
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) => RecipeImage(
+                  recipe: recipe,
+                  width: constraints.maxWidth,
+                  height: 178,
+                  borderRadius: BorderRadius.zero,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            recipe.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.sectionTitle.copyWith(
+                              fontSize: 19,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            '$stepCount ${'stepCounter'.tr()}',
+                            style: AppTextStyles.caption,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: AppRadii.small,
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward,
+                        size: 19,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return InkWell(
       borderRadius: AppRadii.large,
       onTap: () {
@@ -407,7 +500,6 @@ class _SuggestionCard extends StatelessWidget {
           color: AppColors.surface,
           borderRadius: AppRadii.large,
           border: Border.all(color: AppColors.border),
-          boxShadow: AppShadows.soft,
         ),
         child: Row(
           children: [
@@ -484,14 +576,18 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.primaryLight,
-        borderRadius: AppRadii.small,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.primary, size: 22),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: AppRadii.small,
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 18),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
