@@ -7,6 +7,7 @@ import 'location_service.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:uuid/uuid.dart';
+import 'step_activity.dart';
 
 class GeminiService implements AIInterface {
   final String baseUrl = 'http://localhost:2975';
@@ -54,6 +55,7 @@ class GeminiService implements AIInterface {
                     'time': step.timer,
                     'notes': step.notes,
                     'whatToLookFor': step.whatToLookFor,
+                    'activityType': StepActivityResolver.resolve(step).name,
                   },
                 )
                 .toList(),
@@ -286,6 +288,7 @@ class GeminiService implements AIInterface {
       final index = entry.key;
       final step = entry.value;
 
+      final activityType = stepActivityTypeFromName(step['activityType']);
       return Step(
         instruction: step['instruction'] ?? '',
         heat: step['heat'],
@@ -294,6 +297,16 @@ class GeminiService implements AIInterface {
         notes: step['notes'],
         whatToLookFor: step['whatToLookFor'] ?? '',
         index: index,
+        activityType:
+            activityType ??
+            StepActivityResolver.infer(
+              instruction: step['instruction']?.toString() ?? '',
+              heat: step['heat']?.toString(),
+              seasonings: step['seasoning']?.toString(),
+              timer: _toInt(step['time']),
+              notes: step['notes']?.toString(),
+              whatToLookFor: step['whatToLookFor']?.toString(),
+            ),
       );
     }).toList();
 

@@ -19,7 +19,7 @@ class RemixTests(unittest.TestCase):
             'name': 'Beef stir-fry', 'category': 'dinner', 'basePortions': 2, 'tags': ['dinner'],
             'ingredients': [{'name': 'beef', 'quantity': 300, 'unit': 'g'}],
             'tools': [{'name': 'pan', 'quantity': 1}],
-            'steps': [{'instruction': 'Fry beef.', 'time': 180, 'whatToLookFor': 'Brown edges'}],
+            'steps': [{'instruction': 'Fry beef.', 'activityType': 'heat', 'time': 180, 'whatToLookFor': 'Brown edges'}],
         }
         self.generated = copy.deepcopy(self.recipe)
         self.generated['name'] = 'Tofu stir-fry'
@@ -71,7 +71,8 @@ class RemixTests(unittest.TestCase):
     def test_invalid_ai_responses_do_not_create_recipes(self):
         for value in ('not json', '[]', '{"error":"Cannot remix"}',
                       json.dumps({**self.generated, 'steps': []}),
-                      json.dumps({**self.generated, 'steps': [{'instruction': 'Cook', 'time': 'ten'}]})):
+                      json.dumps({**self.generated, 'steps': [{'instruction': 'Cook', 'activityType': 'heat', 'time': 'ten'}]}),
+                      json.dumps({**self.generated, 'steps': [{'instruction': 'Cook', 'activityType': 'dance'}]})):
             with self.subTest(value=value), patch.object(main.gemini_service, 'generate', return_value=value):
                 response = self.post()
                 self.assertEqual(response.status_code, 422)

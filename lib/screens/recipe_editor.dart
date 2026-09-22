@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cooking_daddy/data/models/quotes.dart';
 import '../data/models/recipe.dart';
 import '../data/models/recipe_tags.dart';
+import '../services/step_activity.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import '../data/repositories/recipe_repository.dart';
@@ -158,6 +159,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
 
         stepData.notesController.text = step.notes ?? '';
         stepData.lookForController.text = step.whatToLookFor;
+        stepData.activityType = step.activityType;
         return stepData;
       }).toList();
 
@@ -626,27 +628,42 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
                                   0;
                               final totalSeconds = (timerMin * 60) + timerSec;
 
+                              final instruction = stepData
+                                  .instructionController
+                                  .text
+                                  .trim();
+                              final heat = stepData.heatController.text.trim();
+                              final seasonings = stepData
+                                  .seasoningsController
+                                  .text
+                                  .trim();
+                              final notes = stepData.notesController.text
+                                  .trim();
+                              final whatToLookFor = stepData
+                                  .lookForController
+                                  .text
+                                  .trim();
+
                               return Step(
-                                instruction: stepData.instructionController.text
-                                    .trim(),
-                                heat:
-                                    stepData.heatController.text.trim().isEmpty
+                                instruction: instruction,
+                                heat: heat.isEmpty ? null : heat,
+                                seasonings: seasonings.isEmpty
                                     ? null
-                                    : stepData.heatController.text.trim(),
-                                seasonings:
-                                    stepData.seasoningsController.text
-                                        .trim()
-                                        .isEmpty
-                                    ? null
-                                    : stepData.seasoningsController.text.trim(),
+                                    : seasonings,
                                 timer: totalSeconds > 0 ? totalSeconds : null,
-                                notes:
-                                    stepData.notesController.text.trim().isEmpty
-                                    ? null
-                                    : stepData.notesController.text.trim(),
-                                whatToLookFor: stepData.lookForController.text
-                                    .trim(),
+                                notes: notes.isEmpty ? null : notes,
+                                whatToLookFor: whatToLookFor,
                                 index: steps.indexOf(stepData),
+                                activityType:
+                                    stepData.activityType ??
+                                    StepActivityResolver.infer(
+                                      instruction: instruction,
+                                      heat: heat,
+                                      seasonings: seasonings,
+                                      timer: totalSeconds,
+                                      notes: notes,
+                                      whatToLookFor: whatToLookFor,
+                                    ),
                               );
                             }).toList();
 
@@ -1325,6 +1342,7 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
 }
 
 class StepData {
+  StepActivityType? activityType;
   final TextEditingController instructionController = TextEditingController();
   final TextEditingController heatController = TextEditingController();
   final TextEditingController seasoningsController = TextEditingController();

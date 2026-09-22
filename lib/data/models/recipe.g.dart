@@ -4570,38 +4570,44 @@ const StepSchema = Schema(
   name: r'Step',
   id: 5530288897656118150,
   properties: {
-    r'heat': PropertySchema(
+    r'activityType': PropertySchema(
       id: 0,
+      name: r'activityType',
+      type: IsarType.string,
+      enumMap: _StepactivityTypeEnumValueMap,
+    ),
+    r'heat': PropertySchema(
+      id: 1,
       name: r'heat',
       type: IsarType.string,
     ),
     r'index': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'index',
       type: IsarType.long,
     ),
     r'instruction': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'instruction',
       type: IsarType.string,
     ),
     r'notes': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'notes',
       type: IsarType.string,
     ),
     r'seasonings': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'seasonings',
       type: IsarType.string,
     ),
     r'timer': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'timer',
       type: IsarType.long,
     ),
     r'whatToLookFor': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'whatToLookFor',
       type: IsarType.string,
     )
@@ -4618,6 +4624,12 @@ int _stepEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.activityType;
+    if (value != null) {
+      bytesCount += 3 + value.name.length * 3;
+    }
+  }
   {
     final value = object.heat;
     if (value != null) {
@@ -4647,13 +4659,14 @@ void _stepSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.heat);
-  writer.writeLong(offsets[1], object.index);
-  writer.writeString(offsets[2], object.instruction);
-  writer.writeString(offsets[3], object.notes);
-  writer.writeString(offsets[4], object.seasonings);
-  writer.writeLong(offsets[5], object.timer);
-  writer.writeString(offsets[6], object.whatToLookFor);
+  writer.writeString(offsets[0], object.activityType?.name);
+  writer.writeString(offsets[1], object.heat);
+  writer.writeLong(offsets[2], object.index);
+  writer.writeString(offsets[3], object.instruction);
+  writer.writeString(offsets[4], object.notes);
+  writer.writeString(offsets[5], object.seasonings);
+  writer.writeLong(offsets[6], object.timer);
+  writer.writeString(offsets[7], object.whatToLookFor);
 }
 
 Step _stepDeserialize(
@@ -4663,13 +4676,15 @@ Step _stepDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = Step(
-    heat: reader.readStringOrNull(offsets[0]),
-    index: reader.readLongOrNull(offsets[1]) ?? 0,
-    instruction: reader.readStringOrNull(offsets[2]) ?? '',
-    notes: reader.readStringOrNull(offsets[3]),
-    seasonings: reader.readStringOrNull(offsets[4]),
-    timer: reader.readLongOrNull(offsets[5]),
-    whatToLookFor: reader.readStringOrNull(offsets[6]) ?? '',
+    activityType:
+        _StepactivityTypeValueEnumMap[reader.readStringOrNull(offsets[0])],
+    heat: reader.readStringOrNull(offsets[1]),
+    index: reader.readLongOrNull(offsets[2]) ?? 0,
+    instruction: reader.readStringOrNull(offsets[3]) ?? '',
+    notes: reader.readStringOrNull(offsets[4]),
+    seasonings: reader.readStringOrNull(offsets[5]),
+    timer: reader.readLongOrNull(offsets[6]),
+    whatToLookFor: reader.readStringOrNull(offsets[7]) ?? '',
   );
   return object;
 }
@@ -4682,25 +4697,197 @@ P _stepDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readStringOrNull(offset)) as P;
+      return (_StepactivityTypeValueEnumMap[reader.readStringOrNull(offset)])
+          as P;
     case 1:
-      return (reader.readLongOrNull(offset) ?? 0) as P;
-    case 2:
-      return (reader.readStringOrNull(offset) ?? '') as P;
-    case 3:
       return (reader.readStringOrNull(offset)) as P;
+    case 2:
+      return (reader.readLongOrNull(offset) ?? 0) as P;
+    case 3:
+      return (reader.readStringOrNull(offset) ?? '') as P;
     case 4:
       return (reader.readStringOrNull(offset)) as P;
     case 5:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 6:
+      return (reader.readLongOrNull(offset)) as P;
+    case 7:
       return (reader.readStringOrNull(offset) ?? '') as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
 }
 
+const _StepactivityTypeEnumValueMap = {
+  r'prep': r'prep',
+  r'chop': r'chop',
+  r'mix': r'mix',
+  r'heat': r'heat',
+  r'bake': r'bake',
+  r'wait': r'wait',
+  r'timer': r'timer',
+  r'plate': r'plate',
+  r'complete': r'complete',
+};
+const _StepactivityTypeValueEnumMap = {
+  r'prep': StepActivityType.prep,
+  r'chop': StepActivityType.chop,
+  r'mix': StepActivityType.mix,
+  r'heat': StepActivityType.heat,
+  r'bake': StepActivityType.bake,
+  r'wait': StepActivityType.wait,
+  r'timer': StepActivityType.timer,
+  r'plate': StepActivityType.plate,
+  r'complete': StepActivityType.complete,
+};
+
 extension StepQueryFilter on QueryBuilder<Step, Step, QFilterCondition> {
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'activityType',
+      ));
+    });
+  }
+
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'activityType',
+      ));
+    });
+  }
+
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeEqualTo(
+    StepActivityType? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'activityType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeGreaterThan(
+    StepActivityType? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'activityType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeLessThan(
+    StepActivityType? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'activityType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeBetween(
+    StepActivityType? lower,
+    StepActivityType? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'activityType',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'activityType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'activityType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'activityType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'activityType',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'activityType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Step, Step, QAfterFilterCondition> activityTypeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'activityType',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Step, Step, QAfterFilterCondition> heatIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(

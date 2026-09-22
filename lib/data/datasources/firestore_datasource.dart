@@ -158,6 +158,7 @@ class FirestoreDatasource {
       'timer': step.timer,
       'notes': step.notes,
       'whatToLookFor': step.whatToLookFor,
+      'activityType': step.activityType?.name,
     };
   }
 
@@ -171,6 +172,7 @@ class FirestoreDatasource {
       timer: (data['timer'] as num?)?.toInt(),
       notes: data['notes'] as String?,
       whatToLookFor: data['whatToLookFor'] as String? ?? '',
+      activityType: stepActivityTypeFromName(data['activityType']),
     );
   }
 

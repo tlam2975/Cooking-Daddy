@@ -23,6 +23,7 @@ void main() {
     'steps': [
       {
         'instruction': 'Fry the tofu.',
+        'activityType': 'heat',
         'time': 120,
         'whatToLookFor': 'Golden edges',
       },
@@ -40,7 +41,13 @@ void main() {
         Ingredient(name: 'beef', quantity: 300, unit: MeasurementUnit.g),
       ],
       tools: [Tool(name: 'pan', quantity: 1)],
-      steps: [Step(instruction: 'Fry the beef.', timer: 180)],
+      steps: [
+        Step(
+          instruction: 'Fry the beef.',
+          timer: 180,
+          activityType: StepActivityType.heat,
+        ),
+      ],
       basePortions: 2,
       createdDate: DateTime(2026),
       updatedAt: DateTime(2026),
@@ -62,6 +69,7 @@ void main() {
         expect(body['recipe']['ingredients'][0]['quantity'], 300);
         expect(body['recipe']['ingredients'][0]['unit'], 'g');
         expect(body['recipe']['steps'][0]['time'], 180);
+        expect(body['recipe']['steps'][0]['activityType'], 'heat');
         return http.Response(
           jsonEncode({'success': true, 'recipe': generated}),
           200,
@@ -89,6 +97,7 @@ void main() {
       expect(remix.name, 'Tofu stir-fry');
       expect(remix.ingredients.single.name, 'tofu');
       expect(remix.steps.single.timer, 120);
+      expect(remix.steps.single.activityType, StepActivityType.heat);
       expect(remix.isFavorite, isFalse);
       expect(remix.isSeed, isFalse);
       expect(remix.energyNote, isNull);
@@ -99,32 +108,51 @@ void main() {
     },
   );
 
-  test('smart generation sends actual coordinates and uses the same recipe parser', () async {
-    final service = GeminiService(client: MockClient((request) async {
-      final body = jsonDecode(request.body);
-      expect(request.url.path, '/api/smart-generate');
-      expect(body['location'], {'latitude': 10.78, 'longitude': 106.7});
-      expect(body['language'], 'vi');
-      expect(body['localHour'], inInclusiveRange(0, 23));
-      return http.Response(jsonEncode({'success': true, 'recipe': generated}), 200);
-    }));
-    final result = await service.generateFromIngredients(ingredients: 'tofu', languageCode: 'vi',
-      location: const RecipeLocation(latitude: 10.78, longitude: 106.7));
-    expect(result.success, isTrue);
-    expect(result.recipe!.ingredients.single.name, 'tofu');
-    expect(result.recipe!.steps.single.timer, 120);
-    expect(result.recipe!.id, Isar.autoIncrement);
-  });
+  test(
+    'smart generation sends actual coordinates and uses the same recipe parser',
+    () async {
+      final service = GeminiService(
+        client: MockClient((request) async {
+          final body = jsonDecode(request.body);
+          expect(request.url.path, '/api/smart-generate');
+          expect(body['location'], {'latitude': 10.78, 'longitude': 106.7});
+          expect(body['language'], 'vi');
+          expect(body['localHour'], inInclusiveRange(0, 23));
+          return http.Response(
+            jsonEncode({'success': true, 'recipe': generated}),
+            200,
+          );
+        }),
+      );
+      final result = await service.generateFromIngredients(
+        ingredients: 'tofu',
+        languageCode: 'vi',
+        location: const RecipeLocation(latitude: 10.78, longitude: 106.7),
+      );
+      expect(result.success, isTrue);
+      expect(result.recipe!.ingredients.single.name, 'tofu');
+      expect(result.recipe!.steps.single.timer, 120);
+      expect(result.recipe!.id, Isar.autoIncrement);
+    },
+  );
 
-  test('smart generation without permission sends no default location', () async {
-    final service = GeminiService(client: MockClient((request) async {
-      expect(jsonDecode(request.body).containsKey('location'), isFalse);
-      return http.Response('{"success":false,"error_code":"ai_not_configured"}', 503);
-    }));
-    final result = await service.generateFromIngredients(ingredients: 'rice');
-    expect(result.error, 'ai_not_configured');
-    expect(result.recipe, isNull);
-  });
+  test(
+    'smart generation without permission sends no default location',
+    () async {
+      final service = GeminiService(
+        client: MockClient((request) async {
+          expect(jsonDecode(request.body).containsKey('location'), isFalse);
+          return http.Response(
+            '{"success":false,"error_code":"ai_not_configured"}',
+            503,
+          );
+        }),
+      );
+      final result = await service.generateFromIngredients(ingredients: 'rice');
+      expect(result.error, 'ai_not_configured');
+      expect(result.recipe, isNull);
+    },
+  );
 
   test('a remix of a remix retains the original source link', () async {
     source.sourceRecipeId = 'root-id';

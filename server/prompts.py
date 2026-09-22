@@ -15,6 +15,7 @@ RECIPE_JSON_SHAPE = """
   "steps": [
     {
       "instruction": "string",
+      "activityType": "prep|chop|mix|heat|bake|wait|timer|plate|complete",
       "heat": "string",
       "time": 0,
       "seasoning": "string",
@@ -38,6 +39,8 @@ Rules:
 - Ingredient "unit" must be one of: g, kg, ml, l, tsp, tbsp, cup, pcs, or null.
 - Tool "name" is required; "quantity" may be null when unknown.
 - Step "instruction" and "whatToLookFor" are required.
+- Step "activityType" is required. Choose the step's primary action from: prep, chop, mix, heat, bake, wait, timer, plate, complete.
+- Prefer the specific cooking action over timer; use timer only when waiting for time is the step's main action.
 - Step "time" is saved in seconds as an integer, or null when unknown.
 - Prefer metric measurements and common Asian pantry items.
 - Do not add many extra ingredients beyond what the user provides.

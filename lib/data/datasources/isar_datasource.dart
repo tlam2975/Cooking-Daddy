@@ -188,6 +188,7 @@ class IsarDatasource {
             instruction: 'Crack eggs into bowl and whisk',
             whatToLookFor: 'Eggs are well mixed',
             index: 0,
+            activityType: StepActivityType.mix,
           ),
           Step(
             instruction: 'Heat pan with butter on medium heat',
@@ -195,6 +196,7 @@ class IsarDatasource {
             heat: 'Medium',
             index: 1,
             timer: 60,
+            activityType: StepActivityType.heat,
           ),
           Step(
             instruction: 'Pour eggs and gently stir',
@@ -202,6 +204,7 @@ class IsarDatasource {
             heat: 'Medium',
             index: 2,
             timer: 120,
+            activityType: StepActivityType.mix,
           ),
         ],
       );
@@ -232,6 +235,7 @@ class IsarDatasource {
             whatToLookFor: 'Water is rapidly boiling',
             heat: 'High',
             index: 0,
+            activityType: StepActivityType.heat,
           ),
           Step(
             instruction: 'Add pasta and cook',
@@ -239,11 +243,13 @@ class IsarDatasource {
             heat: 'High',
             index: 1,
             timer: 480,
+            activityType: StepActivityType.heat,
           ),
           Step(
             instruction: 'Drain and toss with olive oil',
             whatToLookFor: 'Pasta is coated evenly',
             index: 2,
+            activityType: StepActivityType.mix,
           ),
         ],
       );
@@ -271,6 +277,7 @@ class IsarDatasource {
             instruction: 'Boil the water',
             heat: 'High',
             whatToLookFor: 'Boiled water',
+            activityType: StepActivityType.heat,
           ),
           Step(
             instruction: 'Gently drop the eggs in',
@@ -278,6 +285,7 @@ class IsarDatasource {
             notes: "Don't break it",
             whatToLookFor: 'Boiled eggs',
             timer: 360,
+            activityType: StepActivityType.heat,
           ),
           Step(
             instruction: 'Take the eggs out and put in cold water',
@@ -286,6 +294,7 @@ class IsarDatasource {
             notes:
                 'This step is to stop the eggs from continuingly being cooked by the remaining heat',
             timer: 120,
+            activityType: StepActivityType.wait,
           ),
         ],
       );

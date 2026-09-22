@@ -82,6 +82,27 @@ class Ingredient {
 
 enum MeasurementUnit { g, kg, ml, l, tsp, tbsp, cup, pcs }
 
+enum StepActivityType {
+  prep,
+  chop,
+  mix,
+  heat,
+  bake,
+  wait,
+  timer,
+  plate,
+  complete,
+}
+
+StepActivityType? stepActivityTypeFromName(Object? value) {
+  final name = value?.toString();
+  if (name == null) return null;
+  for (final candidate in StepActivityType.values) {
+    if (candidate.name == name) return candidate;
+  }
+  return null;
+}
+
 @embedded
 class Tool {
   String name = '';
@@ -100,6 +121,9 @@ class Step {
   String? notes;
   String whatToLookFor = '';
 
+  @Enumerated(EnumType.name)
+  StepActivityType? activityType;
+
   Step({
     this.instruction = '',
     this.heat,
@@ -108,5 +132,6 @@ class Step {
     this.timer,
     this.notes,
     this.whatToLookFor = '',
+    this.activityType,
   });
 }

@@ -6,7 +6,9 @@ import '../data/models/recipe.dart';
 import '../data/repositories/recipe_repository.dart';
 import 'package:flutter/services.dart';
 import '../services/app_navigation_controller.dart';
+import '../services/live_activity_service.dart';
 import '../services/notification.dart';
+import '../services/step_activity.dart';
 import '../services/timer.dart';
 import '../theme/app_theme.dart';
 import '../widgets/recipe_image.dart';
@@ -25,8 +27,11 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
   int currentStepIndex = 0;
   final TimerService _timerService = TimerService();
   final RecipeRepository _repository = RecipeRepository();
+  final CookingLiveActivityService _liveActivity = CookingLiveActivityService();
   bool _completionRecorded = false;
   bool? _timerNotificationsEnabled;
+  bool _timerWasRunning = false;
+  bool _suppressTimerActivityUpdate = false;
 
   // Proximity sensor variables
   StreamSubscription<int>? _proximitySubscription;
@@ -52,10 +57,18 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
       // No timer - start 10-second delay
       _startDelayedProximity();
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(_liveActivity.start(_liveActivitySnapshot()));
+      }
+    });
   }
 
   @override
   void dispose() {
+    _suppressTimerActivityUpdate = true;
+    unawaited(_liveActivity.end(_liveActivitySnapshot()));
     _timerService.removeListener(_onTimerUpdate);
     _timerService.dispose();
     _proximitySubscription?.cancel();
@@ -67,6 +80,12 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
   // ==================== TIMER METHODS ====================
 
   void _onTimerUpdate() {
+    final runningChanged = _timerWasRunning != _timerService.isRunning;
+    _timerWasRunning = _timerService.isRunning;
+    if (runningChanged && !_suppressTimerActivityUpdate) {
+      unawaited(_liveActivity.update(_liveActivitySnapshot()));
+    }
+
     // Check if timer just finished (was running, now stopped at 0)
     if (!_timerService.isRunning && _timerService.remainingSeconds == 0) {
       // Timer finished! Activate proximity sensor
@@ -143,6 +162,39 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
 
   void stopTimer() {
     _timerService.stopTimer();
+  }
+
+  CookingLiveActivitySnapshot _liveActivitySnapshot() {
+    final completed = currentStepIndex >= widget.recipe.steps.length;
+    final step = completed ? null : widget.recipe.steps[currentStepIndex];
+    final stepNumber = completed
+        ? widget.recipe.steps.length
+        : currentStepIndex + 1;
+
+    return CookingLiveActivitySnapshot(
+      recipeName: widget.recipe.name,
+      stepIndex: stepNumber,
+      totalSteps: widget.recipe.steps.length,
+      instruction: completed ? 'done'.tr() : step!.instruction,
+      activityType: StepActivityResolver.effective(
+        step,
+        timerRunning: _timerService.isRunning,
+        completed: completed,
+      ),
+      timerEnd: _timerService.isRunning
+          ? DateTime.now().add(
+              Duration(seconds: _timerService.remainingSeconds),
+            )
+          : null,
+      isCompleted: completed,
+    );
+  }
+
+  void _exitCookingSession() {
+    _suppressTimerActivityUpdate = true;
+    stopTimer();
+    unawaited(_liveActivity.end(_liveActivitySnapshot()));
+    Navigator.pop(context);
   }
 
   String formatTime(int seconds) {
@@ -223,7 +275,9 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
   // ==================== NAVIGATION ====================
 
   void nextStep() {
+    _suppressTimerActivityUpdate = true;
     stopTimer();
+    _suppressTimerActivityUpdate = false;
 
     // Deactivate proximity
     _deactivateProximity();
@@ -248,6 +302,12 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
         _recordCompletion();
       }
     });
+
+    if (currentStepIndex >= widget.recipe.steps.length) {
+      unawaited(_liveActivity.end(_liveActivitySnapshot()));
+    } else {
+      unawaited(_liveActivity.update(_liveActivitySnapshot()));
+    }
 
     if (nextTimerSeconds != null) {
       startTimer(nextTimerSeconds!);
@@ -293,10 +353,7 @@ class _CookingSessionScreenState extends State<CookingSessionScreen> {
                           IconButton(
                             tooltip: 'back'.tr(),
                             icon: const Icon(Icons.arrow_back),
-                            onPressed: () {
-                              stopTimer();
-                              Navigator.pop(context);
-                            },
+                            onPressed: _exitCookingSession,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
@@ -791,13 +848,29 @@ class _CookingActivityIcon extends StatelessWidget {
   }
 
   IconData get _icon {
-    if (completed) return Icons.check_rounded;
-    if (timerRunning) return Icons.timer_outlined;
-    if (step?.timer != null && step!.timer! > 0) return Icons.hourglass_empty;
-    if (step?.heat?.isNotEmpty ?? false) {
-      return Icons.local_fire_department_outlined;
+    switch (StepActivityResolver.effective(
+      step,
+      timerRunning: timerRunning,
+      completed: completed,
+    )) {
+      case StepActivityType.prep:
+        return Icons.soup_kitchen_outlined;
+      case StepActivityType.chop:
+        return Icons.content_cut_rounded;
+      case StepActivityType.mix:
+        return Icons.blender_outlined;
+      case StepActivityType.heat:
+        return Icons.local_fire_department_outlined;
+      case StepActivityType.bake:
+        return Icons.bakery_dining_outlined;
+      case StepActivityType.wait:
+        return Icons.hourglass_bottom_rounded;
+      case StepActivityType.timer:
+        return Icons.timer_outlined;
+      case StepActivityType.plate:
+        return Icons.room_service_outlined;
+      case StepActivityType.complete:
+        return Icons.check_rounded;
     }
-    if (step?.seasonings?.isNotEmpty ?? false) return Icons.restaurant_outlined;
-    return Icons.soup_kitchen_outlined;
   }
 }

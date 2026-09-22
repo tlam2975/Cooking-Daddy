@@ -33,4 +33,9 @@ def valid_recipe(recipe):
                     return False
             if key == 'ingredients' and item.get('unit') not in (None, 'g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'pcs'):
                 return False
+            if key == 'steps' and item.get('activityType') not in (
+                None, 'prep', 'chop', 'mix', 'heat', 'bake', 'wait',
+                'timer', 'plate', 'complete',
+            ):
+                return False
     return True

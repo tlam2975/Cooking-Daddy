@@ -3,6 +3,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+ActivityType = Literal[
+    'prep', 'chop', 'mix', 'heat', 'bake', 'wait', 'timer', 'plate', 'complete'
+]
+
+
 class RecipeFields(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, allow_inf_nan=False)
 
@@ -21,6 +26,7 @@ class ToolOutput(RecipeFields):
 
 class StepOutput(RecipeFields):
     instruction: str = Field(min_length=1)
+    activityType: ActivityType
     heat: str | None = None
     time: int | None = Field(default=None, ge=0, description='Duration in seconds')
     seasoning: str | None = None

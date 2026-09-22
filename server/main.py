@@ -55,10 +55,12 @@ sampleRecipe = {
         "tags": ["high-protein", "comfort", "dinner"],
         "steps": [
             {
+                "activityType": "chop",
                 "instruction": "Wash and peel the potatoes, then slice them into 0.5 cm thick rounds or small cubes.",
                 "whatToLookFor": "Evenly cut potato pieces for uniform cooking."
             },
             {
+                "activityType": "heat",
                 "heat": "medium",
                 "instruction": "Heat vegetable oil in a pan over medium heat. Add the sliced potatoes, season with salt and black pepper. Cook, stirring occasionally.",
                 "seasoning": "salt, black pepper",
@@ -66,10 +68,12 @@ sampleRecipe = {
                 "whatToLookFor": "Potatoes are fork-tender and golden brown on all sides."
             },
             {
+                "activityType": "chop",
                 "instruction": "While potatoes are cooking, wash the asparagus and snap off the woody ends (they naturally break where the tender part begins). Pat the beef dry with paper towels. Season generously with salt and black pepper on all sides. Mince the 2 garlic cloves.",
                 "whatToLookFor": "Asparagus is trimmed to only the tender green spears. Beef is dry and fully seasoned."
             },
             {
+                "activityType": "heat",
                 "heat": "medium",
                 "instruction": "Once potatoes are cooked, remove them from the pan and keep warm. Add 10g of butter to the same pan over medium heat. Once melted, add the asparagus and minced garlic.",
                 "seasoning": "salt, black pepper",
@@ -77,12 +81,14 @@ sampleRecipe = {
                 "whatToLookFor": "Asparagus is bright green and tender-crisp, with a fragrant garlic aroma."
             },
             {
+                "activityType": "heat",
                 "heat": "medium-high",
                 "instruction": "Remove the asparagus from the pan and set aside with the potatoes. Add the remaining 30g of butter to the pan and increase heat to medium-high. Once butter is sizzling and lightly browned, carefully place the seasoned beef in the pan.",
                 "time": 420,
                 "whatToLookFor": "A deep brown crust forms on the beef. Cook to your desired doneness (e.g., 3-4 minutes per side for medium-rare)."
             },
             {
+                "activityType": "wait",
                 "instruction": "Remove beef from the pan and let it rest on a cutting board for 5-10 minutes before slicing. This helps keep the juices in. Slice the beef against the grain and serve immediately with the pan-fried potatoes and asparagus.",
                 "time": 400,
                 "whatToLookFor": "Beef is juicy and tender after resting, and easy to slice."

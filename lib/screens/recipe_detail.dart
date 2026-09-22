@@ -341,7 +341,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           Row(
             children: [
               Expanded(child: Text(title, style: AppTextStyles.sectionTitle)),
-              ?trailing,
+              // The Isar generator's analyzer cannot parse `?trailing` yet.
+              // ignore: use_null_aware_elements
+              if (trailing != null) trailing,
             ],
           ),
           const SizedBox(height: 12),
