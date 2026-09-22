@@ -76,4 +76,14 @@ void main() {
       StepActivityType.prep,
     );
   });
+
+  test('legacy timed steps with a heat setting keep the heat activity', () {
+    final step = Step(
+      instruction: 'Gently drop the eggs in',
+      heat: 'Medium low',
+      timer: 360,
+    );
+
+    expect(StepActivityResolver.resolve(step), StepActivityType.heat);
+  });
 }

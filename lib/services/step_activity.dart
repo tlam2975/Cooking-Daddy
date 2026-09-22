@@ -139,6 +139,7 @@ class StepActivityResolver {
     ])) {
       return StepActivityType.heat;
     }
+    if (heat?.trim().isNotEmpty ?? false) return StepActivityType.heat;
     if (_containsAny(text, const [
       'prepare',
       'prep',
