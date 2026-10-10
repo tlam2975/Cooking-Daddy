@@ -1,14 +1,14 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 import os
 import json
+import secrets
 from dotenv import load_dotenv
 from datetime import datetime
 from gemini_service import GeminiService, GeminiConfigurationError, GeminiRequestError
 from recipe_schema import RecipeOutput
 from models import SmartGenerateRequest
 from prompts import (
-    build_energy_note_prompt,
     build_remix_prompt,
     build_prompt,
     build_smart_prompt,
@@ -16,9 +16,11 @@ from prompts import (
 )
 from youtube_service import get_youtube_transcript
 from service import SmartRecipeService
+from nutrition_service import NutritionLookupUnavailable, NutritionService
 from dashboard_service import DashboardService
 from hero_image_service import find_hero_image
 from remix_service import valid_recipe
+from vercel_logs import LogProviderError, read_runtime_logs
 
 # Load env
 load_dotenv()
@@ -116,10 +118,9 @@ if not API_KEYS:
     API_KEYS = [key for key in [os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')] if key]
 DAILY_LIMIT = len(API_KEYS) * 10
 
-WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
-
 gemini_service = GeminiService(API_KEYS)
-smart_service = SmartRecipeService(WEATHER_API_KEY)
+smart_service = SmartRecipeService(os.getenv('WEATHER_API_KEY'))
+nutrition_service = NutritionService()
 dashboard_service = DashboardService()
 
 app = Flask(__name__)
@@ -179,6 +180,76 @@ def generate_recipe_response(prompt, context=None):
 
 
 # ==================== ROUTES ====================
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html')
+
+
+@app.route('/docs', methods=['GET'])
+def docs():
+    return render_template('docs.html', logs_enabled=bool(os.getenv('LOG_VIEWER_PASSWORD')))
+
+
+@app.route('/logo.png', methods=['GET'])
+def logo():
+    # Vercel serves public/ through its CDN; this also supports local Flask runs.
+    return send_from_directory(os.path.join(app.root_path, 'public'), 'logo.png')
+
+
+def _authorize_log_viewer():
+    expected_password = os.getenv('LOG_VIEWER_PASSWORD')
+    if not expected_password:
+        return jsonify(error='Log viewer is not configured'), 404
+    credentials = request.authorization
+    if (not credentials or credentials.type != 'basic' or
+            not secrets.compare_digest(credentials.username or '', 'admin') or
+            not secrets.compare_digest(credentials.password or '', expected_password)):
+        response = jsonify(error='Authentication required')
+        response.status_code = 401
+        response.headers['WWW-Authenticate'] = 'Basic realm="Cooking Daddy logs"'
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+    return None
+
+
+@app.route('/admin/logs', methods=['GET'])
+def log_viewer():
+    denied = _authorize_log_viewer()
+    if denied is not None:
+        return denied
+    response = app.make_response(render_template('logs.html'))
+    response.headers['Cache-Control'] = 'no-store'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Content-Security-Policy'] = ("default-src 'self'; style-src 'self' 'unsafe-inline'; "
+                                                   "script-src 'self' 'unsafe-inline'; frame-ancestors 'none'")
+    response.headers['Referrer-Policy'] = 'no-referrer'
+    return response
+
+
+@app.route('/admin/logs/data', methods=['GET'])
+def log_viewer_data():
+    denied = _authorize_log_viewer()
+    if denied is not None:
+        return denied
+    token = os.getenv('VERCEL_API_TOKEN')
+    project_id = os.getenv('VERCEL_PROJECT_ID')
+    deployment_id = os.getenv('VERCEL_DEPLOYMENT_ID')
+    if not all((token, project_id, deployment_id)):
+        response = jsonify(error='Set VERCEL_API_TOKEN and expose Vercel system environment variables.')
+        response.status_code = 503
+    else:
+        try:
+            rows = read_runtime_logs(token, project_id, deployment_id,
+                                     os.getenv('VERCEL_TEAM_ID'))
+            response = jsonify(logs=rows)
+        except LogProviderError as error:
+            response = jsonify(error=str(error))
+            response.status_code = 502
+    response.headers['Cache-Control'] = 'no-store'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok', 'timestamp': datetime.utcnow().isoformat() + 'Z'})
@@ -216,7 +287,6 @@ def generate():
         else:
             ai_text = gemini_service.generate(prompt)
             cleaned = clean_json_response(ai_text)
-            print(f'Generated recipe: \n{cleaned}')
             request_count += 1
             parsed = json.loads(cleaned)
             if is_gemini_error(parsed):
@@ -248,6 +318,7 @@ def smart_generate():
         context["meal_time"],
         context["hour"],
         req.language,
+        context["city"],
 
     )
 
@@ -268,12 +339,8 @@ def generate_from_url():
         # 2. Build prompt
         prompt = build_prompt_from_URL(transcript)
 
-        print(f'\n📤 PROMPT SENT:\n{prompt}\n')
-
         # 3. Call Gemini
         ai_text = gemini_service.generate(prompt)
-
-        print(f'\n📥 AI RAW RESPONSE:\n{ai_text}\n')
 
         # 4. Clean + parse
         cleaned = clean_json_response(ai_text)
@@ -293,7 +360,7 @@ def generate_from_url():
         })
 
     except Exception as e:
-        print(f'❌ Error: {e}')
+        app.logger.exception('URL recipe generation failed')
         return jsonify({
             'success': False,
             'error': str(e)
@@ -321,30 +388,13 @@ def remix_recipe():
 
 @app.route('/api/energy-note', methods=['POST'])
 def energy_note():
-    data = request.get_json() or {}
-    prompt = build_energy_note_prompt(data)
-
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify(success=False, error='Invalid recipe'), 400
     try:
-        ai_text = gemini_service.generate(prompt)
-        cleaned = clean_json_response(ai_text)
-        parsed = json.loads(cleaned)
-        note = parsed.get('energyNote')
-        if note:
-            return jsonify({'success': True, 'energyNote': note})
-    except Exception as e:
-        print(f'Energy note fallback: {e}')
-
-    ingredients = data.get('ingredients') or []
-    tags = data.get('tags') or []
-    tag_text = f" Tags: {', '.join(tags)}." if tags else ""
-    return jsonify({
-        'success': True,
-        'energyNote': (
-            f"This recipe has {len(ingredients)} main ingredients. Portion size "
-            "and cooking fat will likely drive how heavy it feels, so pair it "
-            f"with vegetables or a lighter side if needed.{tag_text}"
-        )
-    })
+        return jsonify(success=True, **nutrition_service.build_note(data))
+    except NutritionLookupUnavailable:
+        return jsonify(success=False, error='Nutrition lookup is unavailable'), 503
 
 # ==================== RUN ====================
 

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Private logs · Cooking Daddy{% endblock %}
+{% block content %}
+<div class="eyebrow">Operator access</div>
+<h1>Runtime logs</h1>
+<p class="intro">Runtime output received from this Vercel deployment while refreshing. Logs are only kept for the period allowed by your Vercel plan.</p>
+<div class="controls"><button class="button" id="refresh" type="button">Refresh logs</button><label for="level">Level</label><select id="level"><option value="all">All levels</option><option value="error">Errors</option><option value="warning">Warnings</option><option value="info">Info</option></select><span class="message" id="message" role="status">Loading…</span></div>
+<div class="log-list" id="logs" aria-live="polite"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const list = document.getElementById('logs');
+  const message = document.getElementById('message');
+  const refresh = document.getElementById('refresh');
+  const level = document.getElementById('level');
+  let rows = [];
+  let busy = false;
+
+  function render() {
+    const selected = level.value;
+    const visible = rows.filter(row => selected === 'all' || row.level.toLowerCase() === selected);
+    list.replaceChildren();
+    if (!visible.length) {
+      const empty = document.createElement('div');
+      empty.className = 'panel';
+      empty.textContent = rows.length ? 'No entries match this level.' : 'No runtime entries arrived in this refresh window.';
+      list.append(empty);
+      return;
+    }
+    for (const row of visible) {
+      const item = document.createElement('article');
+      item.className = 'log-row ' + (['error','fatal','warning'].includes(row.level.toLowerCase()) ? row.level.toLowerCase() : '');
+      const meta = document.createElement('div');
+      meta.className = 'log-meta';
+      const timestamp = Number(row.timestamp);
+      const time = Number.isFinite(timestamp) && timestamp > 0 ? new Date(timestamp).toLocaleString() : 'Time unavailable';
+      meta.textContent = [time, row.level.toUpperCase(), row.method, row.path, row.status].filter(Boolean).join(' · ');
+      const body = document.createElement('p');
+      body.className = 'log-message';
+      body.textContent = row.message || '(request event)';
+      item.append(meta, body);
+      list.append(item);
+    }
+  }
+
+  async function load() {
+    if (busy) return;
+    busy = true;
+    refresh.disabled = true;
+    message.textContent = 'Reading Vercel logs…';
+    try {
+      const response = await fetch('/admin/logs/data', {cache:'no-store', credentials:'same-origin'});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not read logs.');
+      rows = data.logs || [];
+      render();
+      message.textContent = `${rows.length} entries · refreshed ${new Date().toLocaleTimeString()}`;
+    } catch (error) {
+      message.textContent = error.message || 'Could not read logs.';
+    } finally {
+      busy = false;
+      refresh.disabled = false;
+    }
+  }
+
+  refresh.addEventListener('click', load);
+  level.addEventListener('change', render);
+  load();
+})();
+</script>
+{% endblock %}

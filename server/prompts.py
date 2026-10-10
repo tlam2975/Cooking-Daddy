@@ -59,7 +59,6 @@ Difficulty: {difficulty}
 
 {_JSON_RULES}
 """
-    print(f"Prompt built: {prompt}")
     return prompt
 
 
@@ -73,6 +72,7 @@ def build_smart_prompt(
     meal_time,
     current_hour,
     language='en',
+    city=None,
 ):
     tools_str = f", tools: {tools}" if tools else ""
     dish_str = dish if dish else "a meal"
@@ -98,6 +98,9 @@ Time Context:
     elif meal_time == "dinner":
         prompt += "- Suggest hearty dinner portions\n"
 
+    if city:
+        prompt += f"\nLocation Context:\n- City: {city}\n"
+
     if weather:
         temp = weather["temperature"]
         condition = weather["condition"]
@@ -106,6 +109,8 @@ Time Context:
         prompt += f"\nWeather Context:\n- Location: {city}\n"
         prompt += f"- Temperature: {temp}C (feels like {weather['feels_like']}C)\n"
         prompt += f"- Condition: {condition}\n"
+        if weather.get('cached'):
+            prompt += f"- Cached observation, {weather.get('ageMinutes', 'unknown')} minutes old; do not claim this is live weather.\n"
 
         if temp > 30:
             prompt += "- Very hot: suggest cold dishes, salads, or no-cook meals\n"
@@ -122,7 +127,6 @@ Time Context:
         prompt += f"- Consider {city}'s local cuisine preferences\n"
 
     prompt += f"\nPut all context above into consideration.\n\n{_JSON_RULES}"
-    print(f"Prompt built: {prompt}")
     return prompt
 
 
@@ -143,22 +147,7 @@ Rules:
 Transcript:
 {transcript}
 """
-    print(f"Prompt built: {prompt}")
     return prompt
-
-
-def build_energy_note_prompt(recipe):
-    return f"""Write a short, practical energy note for this recipe.
-
-Rules:
-- Return JSON only: {{"energyNote": "string"}}
-- Keep it under 45 words.
-- Do not invent exact calories or medical claims.
-- Mention what likely drives heaviness/lightness: protein, starch, fat, sugar, or portion size.
-
-Recipe:
-{recipe}
-"""
 
 
 def build_remix_prompt(recipe, instructions, language='en'):

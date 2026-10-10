@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Endpoints · Cooking Daddy API{% endblock %}
+{% block content %}
+<div class="eyebrow">API reference</div>
+<h1>Endpoints</h1>
+<p class="intro">All paths are relative to this deployment's base URL. POST routes accept JSON. Recipe generation requires a Gemini key configured on the server.</p>
+
+<div class="panels">
+  <div class="panel"><div class="label">Service</div><div class="value status"><span class="dot" aria-hidden="true"></span> Responding</div><p style="color:var(--muted);margin:12px 0 0">Check <a href="/health"><code>/health</code></a> for a machine-readable response.</p></div>
+  <div class="panel"><div class="label">Operator access</div><div class="value">Runtime logs</div><p style="color:var(--muted);margin:12px 0 16px">{% if logs_enabled %}Password protected{% else %}Set a viewer password to enable{% endif %}</p>{% if logs_enabled %}<a class="button secondary" href="/admin/logs">Open private viewer</a>{% else %}<span class="button secondary" aria-disabled="true">Viewer disabled</span>{% endif %}</div>
+</div>
+
+<div class="section-head"><h2>Available endpoints</h2><p>POST routes accept JSON.</p></div>
+<div class="table-wrap"><table><thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead><tbody>
+  <tr><td><span class="method">GET</span></td><td><a href="/health"><code>/health</code></a></td><td>Service health and timestamp</td></tr>
+  <tr><td><span class="method">GET</span></td><td><a href="/api/quota"><code>/api/quota</code></a></td><td>Instance-local AI quota estimate</td></tr>
+  <tr><td><span class="method">GET</span></td><td><a href="/api/dashboard"><code>/api/dashboard</code></a></td><td>Daily kitchen note; optional <code>date</code> query</td></tr>
+  <tr><td><span class="method post">POST</span></td><td><code>/api/smart-generate</code></td><td>Recipe from ingredients, context, and language</td></tr>
+  <tr><td><span class="method post">POST</span></td><td><code>/api/generate-from-ingredients</code></td><td>Legacy ingredient-based recipe generation</td></tr>
+  <tr><td><span class="method post">POST</span></td><td><code>/api/generate-from-url</code></td><td>Recipe from a YouTube transcript</td></tr>
+  <tr><td><span class="method post">POST</span></td><td><code>/api/remix</code></td><td>Variation of a supplied recipe</td></tr>
+  <tr><td><span class="method post">POST</span></td><td><code>/api/energy-note</code></td><td>Open Food Facts nutrition examples</td></tr>
+  <tr><td><span class="method">GET</span></td><td><a href="/api/debug/sample-recipe"><code>/api/debug/sample-recipe</code></a></td><td>Static sample response</td></tr>
+</tbody></table></div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Cooking Daddy API · Developer home{% endblock %}
+{% block content %}
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero-copy">
+    <div class="eyebrow">Cooking Daddy for developers</div>
+    <h1 id="hero-title">Recipes, from a simple request.</h1>
+    <p class="intro">The API that powers Cooking Daddy's recipe ideas, remixes, nutrition notes, and daily kitchen brief. Send JSON, get useful cooking data back.</p>
+    <div class="hero-actions"><a class="button" href="/docs">Explore endpoints</a><a class="button secondary" href="/health">Check service health</a></div>
+    <p class="base-url"><span class="label">Base URL</span><code>{{ request.url_root.rstrip('/') }}</code></p>
+  </div>
+  <div class="hero-visual" aria-label="Example recipe response">
+    <div class="ticket-top"><span class="ticket-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>POST /api/smart-generate</span></div>
+    <pre class="ticket-code"><span class="syntax-muted">// response excerpt</span>
+{
+  <span class="syntax-pink">"success"</span>: <span class="syntax-green">true</span>,
+  <span class="syntax-pink">"recipe"</span>: {
+    <span class="syntax-pink">"name"</span>: <span class="syntax-cream">"Garlic egg fried rice"</span>,
+    <span class="syntax-pink">"ingredients"</span>: [<span class="syntax-muted">…</span>],
+    <span class="syntax-pink">"steps"</span>: [<span class="syntax-muted">…</span>]
+  }
+}</pre>
+    <img class="chef-stamp" src="/logo.png" alt="Cooking Daddy chef mascot" width="112" height="112">
+  </div>
+</section>
+
+<section class="capabilities" aria-labelledby="capabilities-title">
+  <div class="section-head"><div><div class="eyebrow">What you can build</div><h2 id="capabilities-title">Kitchen features, ready to call.</h2></div></div>
+  <div class="feature-grid">
+    <article class="feature"><div class="feature-mark">R</div><h3>Generate recipes</h3><p>Turn ingredients and cooking context into structured recipes with steps and tools.</p><code>POST /api/smart-generate</code></article>
+    <article class="feature"><div class="feature-mark">M</div><h3>Remix a dish</h3><p>Send a saved recipe and instructions to produce an editable variation.</p><code>POST /api/remix</code></article>
+    <article class="feature"><div class="feature-mark">N</div><h3>Add nutrition context</h3><p>Look up product examples for main ingredients through Open Food Facts.</p><code>POST /api/energy-note</code></article>
+  </div>
+</section>
+
+<section class="quickstart" aria-labelledby="quickstart-title">
+  <div><div class="eyebrow">Quick start</div><h2 id="quickstart-title">Try one request.</h2><p>Use an ingredients list to ask for a recipe. The response is JSON; recipe generation requires a configured Gemini key on the server.</p><a class="text-link" href="/docs">See every endpoint →</a></div>
+  <pre class="command"><code>curl -X POST '{{ request.url_root.rstrip('/') }}/api/smart-generate' \
+  -H 'Content-Type: application/json' \
+  -d '{"ingredients":"rice, eggs","language":"en"}'</code></pre>
+</section>
+
+<div class="home-note"><span class="dot" aria-hidden="true"></span><span>The HTTP service is responding. <a href="/health">View live health JSON</a>.</span></div>
+{% endblock %}

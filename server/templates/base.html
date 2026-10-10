@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Cooking Daddy API{% endblock %}</title>
+  <style>
+    :root { color-scheme: light; --ink:#382638; --muted:#725f6d; --paper:#fff7f9; --surface:#fff; --line:#efdce4; --accent:#df4f80; --good:#218063; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    a { color:inherit; }
+    a:focus-visible,button:focus-visible,select:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+    .wrap { width:min(1040px,calc(100% - 40px)); margin:auto; }
+    header { background:#382638; color:#fff9fb; padding:12px 0; border-bottom:4px solid var(--accent); }
+    .head { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+    .brand { display:flex; align-items:center; gap:10px; text-decoration:none; font-weight:800; letter-spacing:-.035em; font-size:1.05rem; }
+    .brand img { width:44px; height:44px; object-fit:cover; border-radius:10px; }
+    .brand small { display:block; color:#efb9cd; font:10px/1.2 ui-monospace,SFMono-Regular,monospace; letter-spacing:.15em; text-transform:uppercase; margin-top:2px; }
+    nav { display:flex; gap:22px; flex-wrap:wrap; }
+    nav a { color:#f1dce5; text-decoration:none; font-size:.9rem; font-weight:600; }
+    nav a:hover { color:white; text-decoration:underline; }
+    main { padding:48px 0 72px; }
+    h1 { font:700 clamp(2.1rem,5vw,3.5rem)/1.08 "Trebuchet MS",-apple-system,sans-serif; letter-spacing:-.055em; margin:0 0 14px; }
+    h2 { font-size:1.12rem; margin:0 0 18px; }
+    p { margin:0 0 16px; }
+    .eyebrow { color:var(--accent); font:700 12px/1.4 ui-monospace,SFMono-Regular,monospace; letter-spacing:.13em; text-transform:uppercase; margin-bottom:12px; }
+    .intro { max-width:690px; color:var(--muted); font-size:1.05rem; }
+    .panel { background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:0 8px 28px rgba(56,38,56,.04); padding:24px; }
+    .panels { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:32px 0; }
+    .label { color:var(--muted); font:700 11px/1.4 ui-monospace,SFMono-Regular,monospace; letter-spacing:.12em; text-transform:uppercase; }
+    .value { font-size:1.25rem; font-weight:750; margin-top:8px; }
+    .status { display:inline-flex; align-items:center; gap:9px; }
+    .dot { width:10px; height:10px; border-radius:50%; background:var(--good); box-shadow:0 0 0 4px #dcefe8; }
+    .button { display:inline-flex; justify-content:center; align-items:center; min-height:40px; padding:8px 15px; background:var(--ink); color:white; border:0; border-radius:8px; text-decoration:none; font:700 13px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; cursor:pointer; }
+    .button:hover { background:#59405a; }
+    .button.secondary { background:white; color:var(--ink); border:1px solid var(--line); }
+    .button.secondary:hover { background:#fff0f5; }
+    .button[aria-disabled="true"] { opacity:.55; cursor:default; }
+    code, .mono { font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    code { background:#f9edf2; padding:2px 5px; border-radius:4px; }
+    .table-wrap { overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:14px; }
+    table { width:100%; border-collapse:collapse; text-align:left; }
+    th,td { padding:14px 18px; border-bottom:1px solid #e3ebea; vertical-align:top; }
+    tr:last-child td { border-bottom:0; }
+    th { color:var(--muted); font:700 11px/1.4 ui-monospace,SFMono-Regular,monospace; letter-spacing:.1em; text-transform:uppercase; }
+    td code { white-space:nowrap; }
+    .method { font:700 12px/1.4 ui-monospace,SFMono-Regular,monospace; color:#15745b; }
+    .method.post { color:#a65033; }
+    .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin:32px 0 14px; }
+    .section-head p { color:var(--muted); font-size:.9rem; }
+    .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:24px 0 18px; }
+    select { min-height:40px; border:1px solid var(--line); border-radius:8px; background:white; color:var(--ink); padding:0 12px; font:inherit; }
+    .message { min-height:24px; color:var(--muted); font-size:.9rem; }
+    .log-list { display:grid; gap:8px; }
+    .log-row { background:white; border:1px solid var(--line); border-left:4px solid #92aaa7; border-radius:7px; padding:13px 15px; }
+    .log-row.error,.log-row.fatal { border-left-color:#c4544d; }
+    .log-row.warning { border-left-color:#d49c35; }
+    .log-meta { display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); font:12px/1.5 ui-monospace,SFMono-Regular,monospace; margin-bottom:5px; }
+    .log-message { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font:13px/1.5 ui-monospace,SFMono-Regular,monospace; }
+    .hero { display:grid; grid-template-columns:1.04fr .96fr; gap:52px; align-items:center; padding:26px 0 52px; }
+    .hero h1 { font-size:clamp(2.75rem,5.8vw,4.5rem); max-width:620px; }
+    .hero .intro { font-size:1.09rem; max-width:510px; }
+    .hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin:28px 0 34px; }
+    .hero-actions .button { min-height:46px; padding:12px 19px; }
+    .base-url { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0; }
+    .base-url code { overflow-wrap:anywhere; }
+    .hero-visual { position:relative; min-width:0; background:#342333; color:#f9f3f5; border-radius:18px; box-shadow:16px 16px 0 #f5d6e1,0 18px 42px rgba(56,38,56,.12); overflow:visible; }
+    .ticket-top { display:flex; align-items:center; gap:18px; padding:18px 22px; border-bottom:1px solid #634d60; font:12px/1.4 ui-monospace,SFMono-Regular,monospace; color:#f7ccdb; }
+    .ticket-dots { display:flex; gap:5px; }
+    .ticket-dots i { display:block; width:7px; height:7px; background:#f287a9; border-radius:50%; }
+    .ticket-dots i:nth-child(2) { opacity:.65; } .ticket-dots i:nth-child(3) { opacity:.35; }
+    .ticket-code { margin:0; padding:24px 22px 82px; overflow:auto; font:14px/1.75 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .syntax-muted { color:#ad94a8; } .syntax-pink { color:#ff9fc0; } .syntax-green { color:#b8e3bd; } .syntax-cream { color:#fbe6b9; }
+    .chef-stamp { position:absolute; right:-24px; bottom:-28px; width:112px; height:112px; border:5px solid white; border-radius:22px; object-fit:cover; box-shadow:0 8px 26px rgba(56,38,56,.17); transform:rotate(7deg); }
+    .capabilities { padding:38px 0 60px; border-top:1px solid var(--line); }
+    .capabilities h2,.quickstart h2 { font:700 clamp(1.65rem,3vw,2.2rem)/1.2 "Trebuchet MS",-apple-system,sans-serif; letter-spacing:-.035em; margin:0; }
+    .feature-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+    .feature { background:white; border:1px solid var(--line); border-radius:13px; padding:24px; }
+    .feature-mark { display:grid; place-items:center; width:34px; height:34px; border-radius:10px; background:#fde2eb; color:#a73361; font:800 16px/1 "Trebuchet MS",sans-serif; }
+    .feature h3 { margin:20px 0 7px; font-size:1.08rem; }
+    .feature p { color:var(--muted); font-size:.94rem; min-height:66px; }
+    .feature code { display:inline-block; max-width:100%; overflow-wrap:anywhere; font-size:11px; }
+    .quickstart { display:grid; grid-template-columns:.7fr 1.3fr; gap:40px; align-items:center; background:#fbe7ee; border:1px solid #f1c9d8; border-radius:18px; padding:32px; }
+    .quickstart p { color:var(--muted); margin:14px 0; }
+    .text-link { color:#9c2a56; font-weight:700; text-underline-offset:3px; }
+    .command { min-width:0; margin:0; background:#382638; color:#fff4f7; border-radius:11px; overflow:auto; padding:22px; }
+    .command code { background:none; color:inherit; padding:0; white-space:pre; }
+    .home-note { display:flex; align-items:center; gap:10px; margin-top:28px; color:var(--muted); font-size:.88rem; }
+    footer { border-top:1px solid var(--line); padding:24px 0 36px; color:var(--muted); font-size:.85rem; }
+    @media (max-width:800px) { .hero { grid-template-columns:1fr; gap:32px; } .hero-visual { max-width:620px; } .feature-grid { grid-template-columns:1fr; } .feature p { min-height:0; } .quickstart { grid-template-columns:1fr; } }
+    @media (max-width:650px) { .head { align-items:flex-start; flex-wrap:wrap; } nav { width:100%; gap:18px; justify-content:flex-start; } .panels { grid-template-columns:1fr; } th,td { padding:11px 12px; } main { padding-top:34px; } .hero { padding-top:0; } .hero-visual { margin-right:16px; } .chef-stamp { width:86px; height:86px; right:-16px; bottom:-18px; } .quickstart { padding:22px; } }
+  </style>
+</head>
+<body>
+  <header><div class="wrap head"><a class="brand" href="/"><img src="/logo.png" alt="" width="44" height="44"><span>Cooking Daddy<small>Developer API</small></span></a><nav><a href="/docs">Endpoints</a><a href="/health">Health</a><a href="/admin/logs">Private logs</a></nav></div></header>
+  <main class="wrap">{% block content %}{% endblock %}</main>
+  <footer><div class="wrap">Cooking Daddy API · <a href="/docs">Endpoint reference</a> · Runtime logs are available to authorized operators only.</div></footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
