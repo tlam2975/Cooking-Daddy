@@ -4,6 +4,7 @@
 <div class="eyebrow">API reference</div>
 <h1>Endpoints</h1>
 <p class="intro">All paths are relative to this deployment's base URL. POST routes accept JSON. Recipe generation requires a Gemini key configured on the server.</p>
+<p>Every <code>/api/</code> request requires a signed-in user's Firebase ID token in <code>Authorization: Bearer &lt;ID_TOKEN&gt;</code>. Missing or invalid tokens return <code>401</code>; verification outages return <code>503</code>. <code>/health</code> is public. Runtime logs use the separate operator password.</p>
 
 <div class="panels">
   <div class="panel"><div class="label">Service</div><div class="value status"><span class="dot" aria-hidden="true"></span> Responding</div><p style="color:var(--muted);margin:12px 0 0">Check <a href="/health"><code>/health</code></a> for a machine-readable response.</p></div>

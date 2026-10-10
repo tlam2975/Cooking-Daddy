@@ -14,10 +14,54 @@ to `CookingDaddy/2.0 (your contact URL or email)` for Open Food Facts requests.
 variables for each Vercel environment you deploy to. Never upload `.env` or
 put real keys in the Flutter app.
 
-After deploying, open `https://YOUR-PROJECT.vercel.app/health` and expect a
+After deploying, open `https://cooking-daddy.vercel.app/health` and expect a
 JSON response with `"status": "ok"`. Then call `/api/quota` and test recipe
-generation with a configured Gemini key. Build the Flutter app with
-`--dart-define=API_BASE_URL=https://YOUR-PROJECT.vercel.app` (no trailing slash).
+generation with a configured Gemini key. The Flutter app defaults to
+`https://cooking-daddy.vercel.app`; override it at build time with
+`--dart-define=API_BASE_URL=https://YOUR-PROJECT.vercel.app` if the host changes
+(no trailing slash).
+
+## API authentication
+
+Every `/api/` route requires `Authorization: Bearer <Firebase ID token>`.
+Flutter obtains this token from the existing signed-in Firebase user and
+refreshes it once if the server returns 401. Missing, expired, invalid, revoked,
+disabled-user, and anonymous-user credentials are rejected before route work.
+The home page, `/docs`, `/health`, and CORS preflight remain public. The runtime
+log viewer continues to use its separate operator password.
+
+Before deploying this version:
+
+1. In Firebase **Project settings > Service accounts**, generate an Admin SDK
+   service-account key for `cooking-daddy-83353`.
+2. In Vercel **Project Settings > Environment Variables**, add
+   `FIREBASE_SERVICE_ACCOUNT_JSON` with the complete JSON key as its value. Set
+   it for each environment being deployed. Keep it on the server; never commit
+   it or include it in a Flutter build.
+3. Redeploy the backend and rebuild/reinstall the Flutter app together. Older
+   builds that do not send ID tokens will receive 401 for API calls.
+
+The expected Firebase project defaults to `cooking-daddy-83353`. Only set
+`FIREBASE_PROJECT_ID` when intentionally changing the Firebase project on both
+client and server. Locally, either set `FIREBASE_SERVICE_ACCOUNT_JSON` in
+`server/.env` or set `GOOGLE_APPLICATION_CREDENTIALS` to the path of a key stored
+outside the repository. The service account needs permission to read Firebase
+Auth users so the server can check revocation and disabled accounts. See the
+[Firebase Admin setup guide](https://firebase.google.com/docs/admin/setup).
+
+If credentials or Firebase verification are unavailable, authenticated requests
+receive 503 with `error_code: auth_unavailable`; the API never falls back to
+public access. `/health` reports process health, not Firebase readiness.
+
+After deployment, verify that `/health` returns 200, an unauthenticated
+`/api/quota` returns 401, and quota and generation work from a signed-in rebuilt
+app. Tokens and credential contents are not written to application logs.
+
+Authentication restricts access to signed-in accounts. It does not limit how
+much an authenticated user can request or prove a request comes from the
+official app.
+
+## Runtime logs
 
 The `/` page is the developer home, and `/docs` lists the available endpoints.
 To enable the private runtime log
@@ -35,8 +79,8 @@ Vercel's own Logs tab remains the source for full search and history.
 The quota counter and weather/nutrition caches currently live in process
 memory. Vercel can start multiple instances and recycle them, so `/api/quota`
 is only an instance-local estimate and does not enforce a global daily limit.
-Add durable, shared quota storage and request authentication before relying on
-this endpoint to control public AI usage. YouTube may also block transcript
+Add durable, shared per-user quota storage before relying on this endpoint to
+control AI usage. YouTube may also block transcript
 requests from cloud IP addresses, independently of a successful deployment.
 
 For local checks from this directory:

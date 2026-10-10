@@ -15,6 +15,11 @@ with patch('dotenv.load_dotenv'), patch('gemini_service.GeminiService'):
 class RemixTests(unittest.TestCase):
     def setUp(self):
         self.client = main.app.test_client()
+        self.client.environ_base['HTTP_AUTHORIZATION'] = 'Bearer test-token'
+        verified_user = patch('api_auth.verify_user_token', return_value={
+            'uid': 'test-user', 'firebase': {'sign_in_provider': 'google.com'}})
+        verified_user.start()
+        self.addCleanup(verified_user.stop)
         self.recipe = {
             'name': 'Beef stir-fry', 'category': 'dinner', 'basePortions': 2, 'tags': ['dinner'],
             'ingredients': [{'name': 'beef', 'quantity': 300, 'unit': 'g'}],

@@ -9,6 +9,14 @@ with patch('dotenv.load_dotenv'), patch('gemini_service.GeminiService'):
 
 
 class NutritionTests(unittest.TestCase):
+    def setUp(self):
+        self.client = main.app.test_client()
+        self.client.environ_base['HTTP_AUTHORIZATION'] = 'Bearer test-token'
+        verified_user = patch('api_auth.verify_user_token', return_value={
+            'uid': 'test-user', 'firebase': {'sign_in_provider': 'google.com'}})
+        verified_user.start()
+        self.addCleanup(verified_user.stop)
+
     def test_macros_preserve_unknowns_and_reject_invalid_numbers(self):
         result = NutritionService._pick_match('onion', [{'product_name': 'Onion',
             'code': '123456789', 'allergens_tags': ['en:milk'],
@@ -61,7 +69,7 @@ class NutritionTests(unittest.TestCase):
             'energyNote': 'Open Food Facts product examples: Onion: 40 kcal/100 g.',
             'nutritionSource': 'Open Food Facts', 'matchedIngredients': 1,
         }), patch.object(main.gemini_service, 'generate') as generate:
-            response = main.app.test_client().post('/api/energy-note', json={
+            response = self.client.post('/api/energy-note', json={
                 'ingredients': [{'name': 'onion'}]})
             generate.assert_not_called()
         self.assertEqual(response.status_code, 200)
@@ -75,7 +83,7 @@ class NutritionTests(unittest.TestCase):
                 service.build_note({'ingredients': [{'name': 'onion'}]})
         with patch.object(main.nutrition_service, 'build_note',
                           side_effect=NutritionLookupUnavailable):
-            response = main.app.test_client().post('/api/energy-note', json={
+            response = self.client.post('/api/energy-note', json={
                 'ingredients': [{'name': 'onion'}]})
         self.assertEqual(response.status_code, 503)
 

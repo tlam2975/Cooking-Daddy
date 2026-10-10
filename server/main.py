@@ -21,6 +21,7 @@ from dashboard_service import DashboardService
 from hero_image_service import find_hero_image
 from remix_service import valid_recipe
 from vercel_logs import LogProviderError, read_runtime_logs
+from api_auth import protect_api
 
 # Load env
 load_dotenv()
@@ -125,6 +126,7 @@ dashboard_service = DashboardService()
 
 app = Flask(__name__)
 CORS(app)
+protect_api(app)
 
 MAX_DAILY_REQUESTS = 40
 request_count = 0
@@ -194,6 +196,11 @@ def docs():
 def logo():
     # Vercel serves public/ through its CDN; this also supports local Flask runs.
     return send_from_directory(os.path.join(app.root_path, 'public'), 'logo.png')
+
+
+@app.route('/favicon.png', methods=['GET'])
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'public'), 'favicon.png')
 
 
 def _authorize_log_viewer():

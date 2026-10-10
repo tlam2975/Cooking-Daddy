@@ -21,6 +21,7 @@ class OperatorPageTests(unittest.TestCase):
         home = self.client.get('/')
         docs = self.client.get('/docs')
         logo = self.client.get('/logo.png')
+        favicon = self.client.get('/favicon.png')
         self.assertEqual(home.status_code, 200)
         self.assertIn(b'Recipes, from a simple request.', home.data)
         self.assertIn(b'/api/smart-generate', home.data)
@@ -28,7 +29,12 @@ class OperatorPageTests(unittest.TestCase):
         self.assertIn(b'/api/energy-note', docs.data)
         self.assertEqual(logo.status_code, 200)
         self.assertEqual(logo.mimetype, 'image/png')
+        self.assertIn(b'href="/favicon.png"', home.data)
+        self.assertIn(b'href="/favicon.png"', docs.data)
+        self.assertEqual(favicon.status_code, 200)
+        self.assertEqual(favicon.mimetype, 'image/png')
         logo.close()
+        favicon.close()
 
     def test_log_routes_are_private_and_disabled_without_password(self):
         with patch.dict('os.environ', {'LOG_VIEWER_PASSWORD': ''}):

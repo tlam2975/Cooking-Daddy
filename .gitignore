@@ -13,6 +13,7 @@
 migrate_working_dir/
 notes.md
 test.dart
+/hand_gesture_lab/
 
 # IntelliJ related
 *.iml
@@ -50,6 +51,6 @@ app.*.map.json
 #Server files
 /server/.env
 /server/.venv
-/server/.python-version
 /server/get-pip.py
 /server/__pycache__/
+/cooking-daddy-83353-firebase-adminsdk-*.json
