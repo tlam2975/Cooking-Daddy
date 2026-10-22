@@ -15,6 +15,8 @@ class NutritionService:
     SEARCH_URL = 'https://world.openfoodfacts.org/cgi/search.pl'
     CACHE_SECONDS = 24 * 60 * 60
     SEARCH_INTERVAL_SECONDS = 6.1
+    REQUEST_BUDGET_SECONDS = 15
+    UPSTREAM_TIMEOUT_SECONDS = 4
 
     def __init__(self):
         self._cache = {}
@@ -22,6 +24,7 @@ class NutritionService:
         self._last_search = 0.0
 
     def build_note(self, recipe):
+        deadline = time.monotonic() + self.REQUEST_BUDGET_SECONDS
         language = recipe.get('language', 'en')
         if language not in ('en', 'vi'):
             language = 'en'
@@ -35,10 +38,19 @@ class NutritionService:
             reverse=True,
         )
         matches = []
-        for ingredient in ranked[:2]:
-            result = self._search(ingredient['name'].strip())
+        looked_up = ranked[:2]
+        failures = 0
+        for ingredient in looked_up:
+            # One unavailable lookup should not hide the other ingredient's data.
+            try:
+                result = self._search(ingredient['name'].strip(), deadline=deadline)
+            except NutritionLookupUnavailable:
+                failures += 1
+                continue
             if result:
                 matches.append({**result, 'ingredient': ingredient['name'].strip()})
+        if looked_up and failures == len(looked_up):
+            raise NutritionLookupUnavailable
 
         if not matches:
             note = ('Chưa tìm thấy dữ liệu dinh dưỡng phù hợp trên Open Food Facts cho nguyên liệu chính.'
@@ -70,13 +82,23 @@ class NutritionService:
             return quantity
         return 0
 
-    def _search(self, name):
+    def _search(self, name, deadline=None):
+        deadline = deadline or time.monotonic() + self.REQUEST_BUDGET_SECONDS
         key = name.lower()
-        with self._lock:
+        # Cached answers need no upstream call, so they never wait for the lock.
+        cached = self._cache.get(key)
+        if cached and time.monotonic() - cached[0] < self.CACHE_SECONDS:
+            return cached[1]
+        # Backpressure: do not queue work that will outlive the mobile deadline.
+        if not self._lock.acquire(timeout=max(0, min(1, deadline - time.monotonic()))):
+            raise NutritionLookupUnavailable
+        try:
             cached = self._cache.get(key)
             if cached and time.monotonic() - cached[0] < self.CACHE_SECONDS:
                 return cached[1]
             remaining = self.SEARCH_INTERVAL_SECONDS - (time.monotonic() - self._last_search)
+            if max(0, remaining) + self.UPSTREAM_TIMEOUT_SECONDS > deadline - time.monotonic():
+                raise NutritionLookupUnavailable
             if remaining > 0:
                 time.sleep(remaining)
             self._last_search = time.monotonic()
@@ -88,7 +110,7 @@ class NutritionService:
                             'fields': 'code,product_name,nutriments,allergens_tags'},
                     headers={'User-Agent': os.getenv('OFF_USER_AGENT',
                              'CookingDaddy/2.0 (recipe app)')},
-                    timeout=4,
+                    timeout=min(self.UPSTREAM_TIMEOUT_SECONDS, deadline - time.monotonic()),
                 )
                 response.raise_for_status()
                 payload = response.json()
@@ -98,8 +120,12 @@ class NutritionService:
             except (requests.RequestException, ValueError, TypeError) as error:
                 raise NutritionLookupUnavailable from error
             result = self._pick_match(name, products)
+            if len(self._cache) >= 1000:
+                self._cache.pop(next(iter(self._cache)))
             self._cache[key] = (time.monotonic(), result)
             return result
+        finally:
+            self._lock.release()
 
     @staticmethod
     def _pick_match(name, products):

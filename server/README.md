@@ -15,7 +15,9 @@ variables for each Vercel environment you deploy to. Never upload `.env` or
 put real keys in the Flutter app.
 
 After deploying, open `https://cooking-daddy.vercel.app/health` and expect a
-JSON response with `"status": "ok"`. Then call `/api/quota` and test recipe
+JSON response with `"status": "ok"`. `/health` also returns `ai_ready`;
+`/ready` returns 503 when Gemini credentials or its SDK are missing. Check
+`/ready` before enabling generation. Then call `/api/quota` and test recipe
 generation with a configured Gemini key. The Flutter app defaults to
 `https://cooking-daddy.vercel.app`; override it at build time with
 `--dart-define=API_BASE_URL=https://YOUR-PROJECT.vercel.app` if the host changes
@@ -46,7 +48,8 @@ The expected Firebase project defaults to `cooking-daddy-83353`. Only set
 client and server. Locally, either set `FIREBASE_SERVICE_ACCOUNT_JSON` in
 `server/.env` or set `GOOGLE_APPLICATION_CREDENTIALS` to the path of a key stored
 outside the repository. The service account needs permission to read Firebase
-Auth users so the server can check revocation and disabled accounts. See the
+Auth users and read/write the Firestore `api_quotas` collection. Mobile clients
+remain unable to write that collection under the existing rules. See the
 [Firebase Admin setup guide](https://firebase.google.com/docs/admin/setup).
 
 If credentials or Firebase verification are unavailable, authenticated requests
@@ -57,9 +60,9 @@ After deployment, verify that `/health` returns 200, an unauthenticated
 `/api/quota` returns 401, and quota and generation work from a signed-in rebuilt
 app. Tokens and credential contents are not written to application logs.
 
-Authentication restricts access to signed-in accounts. It does not limit how
-much an authenticated user can request or prove a request comes from the
-official app.
+Authentication restricts access to signed-in accounts. Successful generation
+and active reservations count toward the daily per-account allowance. It does
+not prove a request comes from the official app.
 
 ## Runtime logs
 
@@ -76,12 +79,24 @@ from Vercel's runtime log stream during each refresh. If these settings
 are missing, log access stays disabled or reports the missing configuration.
 Vercel's own Logs tab remains the source for full search and history.
 
-The quota counter and weather/nutrition caches currently live in process
-memory. Vercel can start multiple instances and recycle them, so `/api/quota`
-is only an instance-local estimate and does not enforce a global daily limit.
-Add durable, shared per-user quota storage before relying on this endpoint to
-control AI usage. YouTube may also block transcript
-requests from cloud IP addresses, independently of a successful deployment.
+Generation, remix, and YouTube import share a Firestore transaction counter
+per Firebase UID and UTC date. `DAILY_REQUEST_LIMIT` defaults to 30 and controls
+both enforcement and `/api/quota`. A claim reserves a slot before Gemini runs;
+normal failures release it. An interrupted worker can leave a reserved slot
+counted until the daily reset. Quota-store failures return 503 and prevent AI
+work. Set a Firestore TTL policy on `api_quotas.expiresAt` to prune old counters.
+See [Firestore transactions](https://firebase.google.com/docs/firestore/manage-data/transactions).
+
+Weather and nutrition caches remain process-local. Nutrition rejects queued
+requests that cannot fit its 15-second work budget; clients close their owned
+HTTP transport on timeout. This does not establish provider availability.
+
+YouTube import accepts supported YouTube hosts, canonicalizes the video URL,
+and builds thumbnails directly from its validated video ID. It never fetches
+the supplied origin. YouTube can still block cloud IPs or withhold captions.
+The app offers a short localized error and lets the user try another video or
+enter ingredients manually. Open Food Facts outages remain provider errors;
+no nutrition values are invented to mask them.
 
 For local checks from this directory:
 

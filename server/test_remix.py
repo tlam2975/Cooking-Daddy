@@ -6,6 +6,7 @@ from unittest.mock import patch
 from prompts import build_remix_prompt
 from recipe_schema import RecipeOutput
 from gemini_service import GeminiService, GeminiRequestError
+from test_quota_support import MemoryQuota
 
 # Tests never create live Gemini clients or read local API keys.
 with patch('dotenv.load_dotenv'), patch('gemini_service.GeminiService'):
@@ -30,7 +31,8 @@ class RemixTests(unittest.TestCase):
         self.generated['name'] = 'Tofu stir-fry'
         self.generated['ingredients'][0]['name'] = 'tofu'
         self.generated['steps'][0]['instruction'] = 'Fry tofu.'
-        self.quota = patch.multiple(main, request_count=0, DAILY_LIMIT=30)
+        self.store = MemoryQuota()
+        self.quota = patch.multiple(main, quota_store=self.store, DAILY_LIMIT=30)
         self.quota.start()
         self.addCleanup(self.quota.stop)
 
@@ -48,7 +50,7 @@ class RemixTests(unittest.TestCase):
         prompt = generate.call_args.args[0]
         for expected in ('Use tofu', 'Beef stir-fry', 'Vietnamese', 'portions: 2', '180'):
             self.assertIn(expected, prompt)
-        self.assertEqual(main.request_count, 1)
+        self.assertEqual(self.store.snapshot('test-user', 30)['remaining'], 29)
         self.assertEqual(self.recipe['ingredients'][0]['name'], 'beef')
         self.assertEqual(generate.call_args.kwargs['response_schema'], RecipeOutput.model_json_schema())
 
@@ -68,7 +70,7 @@ class RemixTests(unittest.TestCase):
             generate.assert_not_called()
 
     def test_quota_prevents_ai_call(self):
-        main.request_count = main.DAILY_LIMIT
+        self.store.counts['test-user'] = main.DAILY_LIMIT
         with patch.object(main.gemini_service, 'generate') as generate:
             self.assertEqual(self.post().status_code, 429)
             generate.assert_not_called()
@@ -123,7 +125,23 @@ class RemixTests(unittest.TestCase):
         schema = RecipeOutput.model_json_schema()
         service.generate('test prompt', response_schema=schema)
         config = client.models.generate_content.call_args.kwargs['config']
-        self.assertEqual(config, {'response_mime_type': 'application/json', 'response_json_schema': schema})
+        self.assertEqual(config, {'response_mime_type': 'application/json', 'response_json_schema': schema,
+                                  'http_options': {'timeout': 25000}})
+
+    def test_gemini_stops_trying_keys_when_time_budget_is_spent(self):
+        from unittest.mock import MagicMock
+        import gemini_service
+        service = GeminiService([])
+        clients = [MagicMock(), MagicMock()]
+        for client in clients:
+            client.models.generate_content.side_effect = TimeoutError('slow')
+        service.clients = clients
+        with patch.object(gemini_service, 'time') as fake_time:
+            fake_time.monotonic.side_effect = [0, 1, 49]
+            with self.assertRaises(gemini_service.GeminiRequestError):
+                service.generate('test prompt')
+        clients[0].models.generate_content.assert_called_once()
+        clients[1].models.generate_content.assert_not_called()
 
     def test_fenced_json_is_accepted(self):
         with patch.object(main.gemini_service, 'generate', return_value='```json\n' + json.dumps(self.generated) + '\n```'):
@@ -134,7 +152,7 @@ class RemixTests(unittest.TestCase):
             response = self.post()
         self.assertEqual(response.status_code, 503)
         self.assertFalse(response.json['success'])
-        self.assertEqual(main.request_count, 0)
+        self.assertEqual(self.store.snapshot('test-user', 30)['remaining'], 30)
 
 
 if __name__ == '__main__':

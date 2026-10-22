@@ -4,6 +4,7 @@ import json
 RECIPE_JSON_SHAPE = """
 {
   "name": "string",
+  "basePortions": 2,
   "category": "breakfast|lunch|dinner|dessert|drinks|lazy meals",
   "tags": ["quick|healthy|budget|comfort|spicy|vegetarian|high-protein|light|kid-friendly|one-pot|no-cook|meal-prep|breakfast|lunch|dinner|dessert|drink"],
   "ingredients": [
@@ -32,6 +33,7 @@ Use this exact shape:
 """ + RECIPE_JSON_SHAPE + """
 
 Rules:
+- Include a positive integer "basePortions": the number of people these quantities serve. Infer it from the source, or choose and state an explicit serving count.
 - Top-level "name", "category", "ingredients", "tools", and "steps" are required.
 - Include 1-5 "tags" from this vocabulary only: quick, healthy, budget, comfort, spicy, vegetarian, high-protein, light, kid-friendly, one-pot, no-cook, meal-prep, breakfast, lunch, dinner, dessert, drink.
 - Ingredient "name" is required.
@@ -44,7 +46,7 @@ Rules:
 - Step "time" is saved in seconds as an integer, or null when unknown.
 - Prefer metric measurements and common Asian pantry items.
 - Do not add many extra ingredients beyond what the user provides.
-- If a recipe cannot be generated, return {"error": "brief reason"}.
+- "error" must be null for a real recipe. If a recipe cannot be generated, set "error" to a brief reason and keep every other field minimal.
 """
 
 
@@ -102,17 +104,26 @@ Time Context:
         prompt += f"\nLocation Context:\n- City: {city}\n"
 
     if weather:
-        temp = weather["temperature"]
+        temp = weather.get("temperature")
+        feels_like = weather.get("feels_like")
         condition = weather["condition"]
         city = weather["city"]
+        has_temp = isinstance(temp, (int, float)) and not isinstance(temp, bool)
 
         prompt += f"\nWeather Context:\n- Location: {city}\n"
-        prompt += f"- Temperature: {temp}C (feels like {weather['feels_like']}C)\n"
+        # Open-Meteo can return null values; skip what is missing.
+        if has_temp:
+            prompt += f"- Temperature: {temp}C"
+            if isinstance(feels_like, (int, float)) and not isinstance(feels_like, bool):
+                prompt += f" (feels like {feels_like}C)"
+            prompt += "\n"
         prompt += f"- Condition: {condition}\n"
         if weather.get('cached'):
             prompt += f"- Cached observation, {weather.get('ageMinutes', 'unknown')} minutes old; do not claim this is live weather.\n"
 
-        if temp > 30:
+        if not has_temp:
+            pass
+        elif temp > 30:
             prompt += "- Very hot: suggest cold dishes, salads, or no-cook meals\n"
         elif temp > 25:
             prompt += "- Warm: prefer light, refreshing meals\n"
@@ -140,7 +151,7 @@ Rules:
 - Only use information explicitly present in the transcript.
 - Do not infer or add missing data.
 - Use metric units if provided; do not convert if absent.
-- If no recipe is present, return {{"error": "Transcript does not contain a recipe or cooking instructions"}}.
+- If no recipe is present, set "error" to "Transcript does not contain a recipe or cooking instructions". Do not make up a recipe.
 
 {_JSON_RULES}
 

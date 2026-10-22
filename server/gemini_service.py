@@ -1,3 +1,12 @@
+import time
+
+# Vercel kills the function at 60 s, which would leak the reserved quota.
+# Fail well before that so the route can release the reservation.
+CALL_TIMEOUT_SECONDS = 25
+TOTAL_BUDGET_SECONDS = 50
+MIN_CALL_SECONDS = 5
+
+
 class GeminiConfigurationError(RuntimeError):
     pass
 
@@ -28,17 +37,24 @@ class GeminiService:
             raise GeminiConfigurationError(self.configuration_error)
 
         last_error = None
+        deadline = time.monotonic() + TOTAL_BUDGET_SECONDS
 
         for i, client in enumerate(self.clients):
+            remaining = deadline - time.monotonic()
+            if remaining < MIN_CALL_SECONDS:
+                print('Gemini time budget used up; not trying more keys')
+                break
             try:
                 print(f'🔑 Trying API key #{i+1}')
 
-                config = {}
+                # http_options.timeout is in milliseconds.
+                config = {'http_options': {
+                    'timeout': int(min(CALL_TIMEOUT_SECONDS, remaining) * 1000)}}
                 if response_schema is not None:
-                    config = {
+                    config.update({
                         'response_mime_type': 'application/json',
                         'response_json_schema': response_schema,
-                    }
+                    })
                 response = client.models.generate_content(
                     model=self.model,
                     contents=[

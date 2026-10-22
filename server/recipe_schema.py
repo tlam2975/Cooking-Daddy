@@ -35,6 +35,7 @@ class StepOutput(RecipeFields):
 
 
 class RecipeOutput(RecipeFields):
+    basePortions: int = Field(ge=1, le=100, description='Number of people served by these exact quantities')
     name: str = Field(min_length=1)
     category: Literal['breakfast', 'lunch', 'dinner', 'dessert', 'drinks', 'lazy meals']
     tags: list[Literal[
@@ -45,3 +46,10 @@ class RecipeOutput(RecipeFields):
     ingredients: list[IngredientOutput] = Field(min_length=1)
     tools: list[ToolOutput]
     steps: list[StepOutput] = Field(min_length=1)
+    # The schema is enforced, so without this field Gemini would invent a
+    # recipe for input that has none. A non-empty error rejects the output.
+    error: str | None = Field(
+        default=None,
+        description='Null for a real recipe. A brief reason when the input '
+                    'contains no recipe; the other fields are then ignored.',
+    )

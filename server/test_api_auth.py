@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from firebase_admin import auth
 import api_auth
+from test_quota_support import MemoryQuota
 
 with patch('dotenv.load_dotenv'), patch('gemini_service.GeminiService'):
     import main
@@ -15,6 +16,9 @@ HEADERS = {'Authorization': 'Bearer test-token'}
 class ApiAuthenticationTests(unittest.TestCase):
     def setUp(self):
         self.client = main.app.test_client()
+        quota = patch.object(main, 'quota_store', MemoryQuota())
+        quota.start()
+        self.addCleanup(quota.stop)
 
     def test_every_api_route_rejects_missing_and_malformed_credentials(self):
         with patch('api_auth.verify_user_token') as verify, \

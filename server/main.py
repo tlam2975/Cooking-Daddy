@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, g, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 import os
 import json
@@ -14,14 +14,14 @@ from prompts import (
     build_smart_prompt,
     build_prompt_from_URL,
 )
-from youtube_service import get_youtube_transcript
+from youtube_service import get_youtube_transcript, canonical_youtube_url, youtube_thumbnail
 from service import SmartRecipeService
 from nutrition_service import NutritionLookupUnavailable, NutritionService
 from dashboard_service import DashboardService
-from hero_image_service import find_hero_image
 from remix_service import valid_recipe
 from vercel_logs import LogProviderError, read_runtime_logs
 from api_auth import protect_api
+from quota_service import FirestoreQuotaStore, QuotaExceeded, QuotaUnavailable
 
 # Load env
 load_dotenv()
@@ -117,7 +117,8 @@ API_KEYS = [
 API_KEYS = [k for k in API_KEYS if k]
 if not API_KEYS:
     API_KEYS = [key for key in [os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')] if key]
-DAILY_LIMIT = len(API_KEYS) * 10
+DAILY_LIMIT = max(1, int(os.getenv('DAILY_REQUEST_LIMIT', '30')))
+quota_store = FirestoreQuotaStore()
 
 gemini_service = GeminiService(API_KEYS)
 smart_service = SmartRecipeService(os.getenv('WEATHER_API_KEY'))
@@ -128,8 +129,7 @@ app = Flask(__name__)
 CORS(app)
 protect_api(app)
 
-MAX_DAILY_REQUESTS = 40
-request_count = 0
+
 
 # ==================== UTIL ====================
 
@@ -149,36 +149,51 @@ def is_gemini_error(parsed):
     return isinstance(parsed, dict) and 'error' in parsed and 'steps' not in parsed
 
 
-def generate_recipe_response(prompt, context=None):
-    """Smart generation and Remix share the Gemini schema and response contract."""
-    global request_count
+def generate_recipe_response(prompt, context=None, source_url=None):
+    """All generation uses one schema and one durable account entitlement."""
     if not gemini_service.clients:
-        return jsonify(success=False, error=gemini_service.configuration_error,
+        return jsonify(success=False, error='Recipe generation is unavailable',
                        error_code='ai_not_configured'), 503
-    if request_count >= DAILY_LIMIT:
-        return jsonify(success=False, error='Daily quota exceeded',
-                       error_code='ai_quota_error'), 429
+    reservation = None
+    committed = False
     try:
+        reservation, remaining = quota_store.reserve(g.user_id, DAILY_LIMIT)
         text = gemini_service.generate(prompt, response_schema=RecipeOutput.model_json_schema())
-        request_count += 1
         recipe = RecipeOutput.model_validate_json(clean_json_response(text)).model_dump()
-        payload = {'success': True, 'recipe': recipe,
-                   'remaining_quota': max(0, DAILY_LIMIT - request_count)}
+        reason = (recipe.pop('error', None) or '').strip()
+        if reason:
+            # Not committed, so the reservation is released below.
+            app.logger.info('Gemini found no recipe: %s', reason[:200])
+            return jsonify(success=False, error='No recipe found in this source',
+                           error_code='ai_not_a_recipe'), 422
+        if source_url:
+            recipe['url'] = source_url
+            recipe['imageUrl'] = youtube_thumbnail(source_url)
+        committed = True
+        payload = {'success': True, 'recipe': recipe, 'remaining_quota': remaining}
         if context is not None:
             payload['context'] = context
         return jsonify(payload)
-    except GeminiConfigurationError as error:
-        return jsonify(success=False, error=str(error), error_code='ai_not_configured'), 503
+    except QuotaExceeded:
+        return jsonify(success=False, error='Daily quota exceeded', error_code='ai_quota_error'), 429
+    except QuotaUnavailable:
+        return jsonify(success=False, error='Quota is temporarily unavailable', error_code='ai_quota_unavailable'), 503
+    except GeminiConfigurationError:
+        return jsonify(success=False, error='Recipe generation is unavailable', error_code='ai_not_configured'), 503
     except ValueError:
-        return jsonify(success=False, error='AI returned an invalid recipe',
-                       error_code='ai_invalid_recipe'), 422
+        return jsonify(success=False, error='AI returned an invalid recipe', error_code='ai_invalid_recipe'), 422
     except GeminiRequestError as error:
         code = 'ai_quota_error' if error.status_code == 429 else 'ai_generation_error'
-        return jsonify(success=False, error=str(error), error_code=code), (429 if error.status_code == 429 else 503)
+        return jsonify(success=False, error='Recipe generation is unavailable', error_code=code), (429 if error.status_code == 429 else 503)
     except Exception:
         app.logger.exception('Recipe generation failed')
-        return jsonify(success=False, error='Recipe generation is unavailable',
-                       error_code='ai_generation_error'), 503
+        return jsonify(success=False, error='Recipe generation is unavailable', error_code='ai_generation_error'), 503
+    finally:
+        if reservation is not None and not committed:
+            try:
+                quota_store.release(g.user_id, reservation)
+            except QuotaUnavailable:
+                app.logger.error('Could not release failed generation reservation')
 
 
 # ==================== ROUTES ====================
@@ -209,8 +224,10 @@ def _authorize_log_viewer():
         return jsonify(error='Log viewer is not configured'), 404
     credentials = request.authorization
     if (not credentials or credentials.type != 'basic' or
-            not secrets.compare_digest(credentials.username or '', 'admin') or
-            not secrets.compare_digest(credentials.password or '', expected_password)):
+            # compare_digest raises TypeError on non-ASCII str, so compare bytes.
+            not secrets.compare_digest((credentials.username or '').encode('utf-8'), b'admin') or
+            not secrets.compare_digest((credentials.password or '').encode('utf-8'),
+                                       expected_password.encode('utf-8'))):
         response = jsonify(error='Authentication required')
         response.status_code = 401
         response.headers['WWW-Authenticate'] = 'Basic realm="Cooking Daddy logs"'
@@ -259,51 +276,40 @@ def log_viewer_data():
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({'status': 'ok', 'timestamp': datetime.utcnow().isoformat() + 'Z'})
+    return jsonify({'status': 'ok', 'ai_ready': bool(gemini_service.clients),
+                    'timestamp': datetime.utcnow().isoformat() + 'Z'})
+
+@app.route('/ready', methods=['GET'])
+def ready():
+    available = bool(gemini_service.clients)
+    return jsonify(ai_ready=available), (200 if available else 503)
 
 @app.route('/api/quota', methods=['GET'])
 def get_quota():
-    return jsonify({
-        'remaining': max(0, MAX_DAILY_REQUESTS - request_count),
-        'limit': MAX_DAILY_REQUESTS
-    })
+    try:
+        result = quota_store.snapshot(g.user_id, DAILY_LIMIT)
+        if not gemini_service.clients:
+            result['remaining'] = 0
+        result['ai_ready'] = bool(gemini_service.clients)
+        return jsonify(result)
+    except QuotaUnavailable:
+        return jsonify(success=False, error_code='ai_quota_unavailable'), 503
 
 @app.route('/api/dashboard', methods=['GET'])
 def dashboard():
     day = request.args.get('date')
-    return jsonify(dashboard_service.get_daily_brief(day))
+    lang = request.args.get('lang')
+    return jsonify(dashboard_service.get_daily_brief(day, lang))
 
 @app.route('/api/generate-from-ingredients', methods=['POST'])
 def generate():
-    data = request.get_json()
-
-    prompt = build_prompt(
-        ingredients=data.get('ingredients'),
-        tools=data.get('tools'),
-        session_length=data.get('sessionLength', 'short'),
-        difficulty=data.get('difficulty', 'normal'),
-        dish=data.get('dish')
-    )
-
-    try:
-        global request_count
-        if request_count >= DAILY_LIMIT:
-            return jsonify({
-                'error': 'Daily quota exceeded',
-                'success': False}), 429
-        else:
-            ai_text = gemini_service.generate(prompt)
-            cleaned = clean_json_response(ai_text)
-            request_count += 1
-            parsed = json.loads(cleaned)
-            if is_gemini_error(parsed):
-                return jsonify({'success': False, 'error': parsed['error']}), 422
-            return jsonify({
-                'success': True,
-                'recipe': parsed
-            })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get('ingredients'), str) or not data['ingredients'].strip():
+        return jsonify(success=False, error='Ingredients are required'), 400
+    prompt = build_prompt(ingredients=data['ingredients'], tools=data.get('tools'),
+        session_length=data.get('sessionLength', 'short'), difficulty=data.get('difficulty', 'normal'),
+        dish=data.get('dish'))
+    return generate_recipe_response(prompt)
 
 
 @app.route('/api/smart-generate', methods=['POST'])
@@ -312,6 +318,13 @@ def smart_generate():
         req = SmartGenerateRequest(request.get_json(silent=True))
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
+
+    # Check quota before the weather lookups so an exhausted account costs nothing.
+    try:
+        if quota_store.snapshot(g.user_id, DAILY_LIMIT)['remaining'] <= 0:
+            return jsonify(success=False, error='Daily quota exceeded', error_code='ai_quota_error'), 429
+    except QuotaUnavailable:
+        return jsonify(success=False, error='Quota is temporarily unavailable', error_code='ai_quota_unavailable'), 503
 
     context = smart_service.build_context(req)
 
@@ -333,45 +346,27 @@ def smart_generate():
     
 @app.route('/api/generate-from-url', methods=['POST'])
 def generate_from_url():
-    data = request.get_json()
-    url = data.get('url', '').strip()
-
-    if not url:
-        return jsonify({'error': 'URL is required'}), 400
-
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify(success=False, error_code='youtube_invalid_url'), 400
     try:
-        # 1. Get transcript
+        url = canonical_youtube_url(data.get('url'))
+    except ValueError:
+        return jsonify(success=False, error='Use a supported YouTube video URL', error_code='youtube_invalid_url'), 400
+    if not gemini_service.clients:
+        return jsonify(success=False, error_code='ai_not_configured'), 503
+    try:
+        if quota_store.snapshot(g.user_id, DAILY_LIMIT)['remaining'] <= 0:
+            return jsonify(success=False, error_code='ai_quota_error'), 429
         transcript = get_youtube_transcript(url)
-
-        # 2. Build prompt
-        prompt = build_prompt_from_URL(transcript)
-
-        # 3. Call Gemini
-        ai_text = gemini_service.generate(prompt)
-
-        # 4. Clean + parse
-        cleaned = clean_json_response(ai_text)
-        recipe = json.loads(cleaned)
-
-        if is_gemini_error(recipe):
-            return jsonify({'success': False, 'error': recipe['error']}), 422
-
-        recipe['url'] = url
-        image_url = find_hero_image(url)
-        if image_url and not recipe.get('imageUrl'):
-            recipe['imageUrl'] = image_url
-
-        return jsonify({
-            'success': True,
-            'recipe': recipe
-        })
-
-    except Exception as e:
-        app.logger.exception('URL recipe generation failed')
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+    except QuotaUnavailable:
+        return jsonify(success=False, error_code='ai_quota_unavailable'), 503
+    except Exception:
+        # Provider diagnostics belong in server logs, not mobile error copy.
+        app.logger.warning('YouTube transcript import unavailable')
+        return jsonify(success=False, error='Captions are unavailable. Try another video or enter ingredients manually.',
+                       error_code='youtube_import_unavailable'), 503
+    return generate_recipe_response(build_prompt_from_URL(transcript), source_url=url)
 
 @app.route('/api/debug/sample-recipe', methods=['GET'])
 def get_sample_recipe():
