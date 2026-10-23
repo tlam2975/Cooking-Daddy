@@ -152,7 +152,7 @@ Rules:
 - Only use information explicitly present in the transcript.
 - Do not infer or add missing data.
 - Use metric units if provided; do not convert if absent.
-- If no recipe is present, set "error" to "Transcript does not contain a recipe or cooking instructions". Do not make up a recipe.
+- If the transcript does not describe cooking a specific dish, you MUST set "error" to "Transcript does not contain a recipe or cooking instructions". Never fill name, ingredients or steps with placeholders such as "Unknown" or "No Recipe", and do not make up a recipe.
 
 {_JSON_RULES}
 
