@@ -149,7 +149,7 @@ def is_gemini_error(parsed):
     return isinstance(parsed, dict) and 'error' in parsed and 'steps' not in parsed
 
 
-def generate_recipe_response(prompt, context=None, source_url=None):
+def generate_recipe_response(prompt, context=None, source_url=None, thinking_budget=None):
     """All generation uses one schema and one durable account entitlement."""
     if not gemini_service.clients:
         return jsonify(success=False, error='Recipe generation is unavailable',
@@ -158,7 +158,8 @@ def generate_recipe_response(prompt, context=None, source_url=None):
     committed = False
     try:
         reservation, remaining = quota_store.reserve(g.user_id, DAILY_LIMIT)
-        text = gemini_service.generate(prompt, response_schema=RecipeOutput.model_json_schema())
+        text = gemini_service.generate(prompt, response_schema=RecipeOutput.model_json_schema(),
+                                       thinking_budget=thinking_budget)
         recipe = RecipeOutput.model_validate_json(clean_json_response(text)).model_dump()
         reason = (recipe.pop('error', None) or '').strip()
         if reason:
@@ -368,7 +369,8 @@ def generate_from_url():
                            type(error).__name__, str(error)[:300], exc_info=True)
         return jsonify(success=False, error='Captions are unavailable. Try another video or enter ingredients manually.',
                        error_code='youtube_import_unavailable'), 503
-    return generate_recipe_response(build_prompt_from_URL(transcript), source_url=url)
+    # Extraction is mechanical; default thinking takes ~30 s, over the per-call limit.
+    return generate_recipe_response(build_prompt_from_URL(transcript), source_url=url, thinking_budget=0)
 
 @app.route('/api/debug/sample-recipe', methods=['GET'])
 def get_sample_recipe():

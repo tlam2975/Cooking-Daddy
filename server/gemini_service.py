@@ -32,7 +32,7 @@ class GeminiService:
 
             self.clients = [genai.Client(api_key=k) for k in api_keys]
 
-    def generate(self, prompt: str, response_schema=None) -> str:
+    def generate(self, prompt: str, response_schema=None, thinking_budget=None) -> str:
         if not self.clients:
             raise GeminiConfigurationError(self.configuration_error)
 
@@ -50,6 +50,8 @@ class GeminiService:
                 # http_options.timeout is in milliseconds.
                 config = {'http_options': {
                     'timeout': int(min(CALL_TIMEOUT_SECONDS, remaining) * 1000)}}
+                if thinking_budget is not None:
+                    config['thinking_config'] = {'thinking_budget': thinking_budget}
                 if response_schema is not None:
                     config.update({
                         'response_mime_type': 'application/json',

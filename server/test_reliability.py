@@ -83,6 +83,7 @@ class ReliabilityTests(unittest.TestCase):
                                 ('/api/generate-from-url', {'url': 'https://youtu.be/abcdefghijk'})):
                 self.assertEqual(self.client.post(route, json=body).status_code, 429)
             generate.assert_called_once()
+            self.assertEqual(generate.call_args.kwargs['thinking_budget'], 0)
 
     def test_import_provider_error_is_short_and_does_not_use_quota(self):
         with patch.object(main, 'get_youtube_transcript', side_effect=RuntimeError('long secret provider diagnostics')):
