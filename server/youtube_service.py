@@ -1,43 +1,30 @@
 """YouTube transcript fetching. Used by main.py's /api/generate-from-url route."""
 
+import os
 import re
 
 _LANGUAGES = ['vi', 'en']
+# A cooking video rarely needs more than this; longer transcripts only add
+# token cost and push the request past the function timeout.
+_MAX_TRANSCRIPT_CHARS = 30000
 
 
 def get_youtube_transcript(url: str) -> str:
-    from youtube_transcript_api import (
-        NoTranscriptFound,
-        TranscriptsDisabled,
-        YouTubeTranscriptApi,
-    )
-    from youtube_transcript_api._errors import VideoUnavailable
+    from youtube_transcript_api import YouTubeTranscriptApi
+    from youtube_transcript_api.proxies import GenericProxyConfig
 
     video_id = _extract_video_id(url)
     if not video_id:
         raise ValueError(f"Could not extract a valid YouTube video ID from URL: {url}")
 
-    try:
-        ytt = YouTubeTranscriptApi()
-        # The library defaults to English only; many cooking videos here have
-        # Vietnamese captions alone.
-        transcript_segments = ytt.fetch(video_id, languages=_LANGUAGES)
-    except AttributeError:
-        transcript_segments = YouTubeTranscriptApi.get_transcript(
-            video_id, languages=_LANGUAGES
-        )
-    except TranscriptsDisabled:
-        raise RuntimeError(f"Transcripts are disabled for video: {video_id}")
-    except NoTranscriptFound:
-        raise RuntimeError(f"No transcript found for video: {video_id}")
-    except VideoUnavailable:
-        raise RuntimeError(f"Video is unavailable: {video_id}")
-
-    full_text = " ".join(
-        segment.text if hasattr(segment, "text") else segment["text"]
-        for segment in transcript_segments
-    )
-    return full_text
+    # YouTube often rejects datacenter IPs (e.g. Vercel); a proxy is the
+    # supported workaround, so allow one to be configured per deployment.
+    proxy = os.getenv('YOUTUBE_PROXY_URL')
+    proxy_config = GenericProxyConfig(http_url=proxy, https_url=proxy) if proxy else None
+    # The library defaults to English only; many cooking videos here have
+    # Vietnamese captions alone.
+    segments = YouTubeTranscriptApi(proxy_config=proxy_config).fetch(video_id, languages=_LANGUAGES)
+    return " ".join(segment.text for segment in segments)[:_MAX_TRANSCRIPT_CHARS]
 
 
 def _extract_video_id(url: str) -> str | None:

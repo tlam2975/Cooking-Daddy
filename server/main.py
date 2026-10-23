@@ -358,12 +358,14 @@ def generate_from_url():
     try:
         if quota_store.snapshot(g.user_id, DAILY_LIMIT)['remaining'] <= 0:
             return jsonify(success=False, error_code='ai_quota_error'), 429
-        transcript = get_youtube_transcript(url)
     except QuotaUnavailable:
         return jsonify(success=False, error_code='ai_quota_unavailable'), 503
-    except Exception:
+    try:
+        transcript = get_youtube_transcript(url)
+    except Exception as error:
         # Provider diagnostics belong in server logs, not mobile error copy.
-        app.logger.warning('YouTube transcript import unavailable')
+        app.logger.warning('YouTube transcript import unavailable: %s: %s',
+                           type(error).__name__, str(error)[:300], exc_info=True)
         return jsonify(success=False, error='Captions are unavailable. Try another video or enter ingredients manually.',
                        error_code='youtube_import_unavailable'), 503
     return generate_recipe_response(build_prompt_from_URL(transcript), source_url=url)

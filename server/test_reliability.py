@@ -73,6 +73,8 @@ class ReliabilityTests(unittest.TestCase):
             imported = self.client.post('/api/generate-from-url', json={'url': 'https://youtu.be/abcdefghijk'})
             self.assertEqual(imported.status_code, 200)
             self.assertEqual(imported.json['recipe']['basePortions'], 2)
+            self.assertEqual(imported.json['recipe']['url'], 'https://www.youtube.com/watch?v=abcdefghijk')
+            self.assertEqual(imported.json['recipe']['imageUrl'], 'https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg')
             self.assertEqual(imported.json['remaining_quota'], 0)
             self.assertEqual(self.client.get('/api/quota').json['remaining'], 0)
             for route, body in (('/api/smart-generate', {'ingredients': 'onion'}),
@@ -89,6 +91,12 @@ class ReliabilityTests(unittest.TestCase):
         self.assertEqual(response.json['error_code'], 'youtube_import_unavailable')
         self.assertNotIn('diagnostics', response.get_data(as_text=True))
         self.assertEqual(self.quota.snapshot('A', 1)['remaining'], 1)
+
+    def test_import_failure_is_logged_with_cause(self):
+        with patch.object(main, 'get_youtube_transcript', side_effect=RuntimeError('blocked')), \
+             self.assertLogs(main.app.logger, 'WARNING') as logs:
+            self.client.post('/api/generate-from-url', json={'url': 'https://youtu.be/abcdefghijk'})
+        self.assertIn('RuntimeError: blocked', logs.output[0])
 
     def test_firestore_counter_survives_instances_and_reserves_last_slot_once(self):
         database = Client(); now = datetime(2026, 10, 11, tzinfo=timezone.utc)
