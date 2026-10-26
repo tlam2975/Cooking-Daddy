@@ -27,6 +27,15 @@ def get_youtube_transcript(url: str) -> str:
     return " ".join(segment.text for segment in segments)[:_MAX_TRANSCRIPT_CHARS]
 
 
+def client_transcript(value) -> str | None:
+    """Captions the app fetched itself, capped like server-fetched ones.
+    Returns None when missing or too short to be real captions."""
+    if not isinstance(value, str):
+        return None
+    text = " ".join(value.split())
+    return text[:_MAX_TRANSCRIPT_CHARS] if len(text) >= 20 else None
+
+
 def _extract_video_id(url: str) -> str | None:
     from urllib.parse import urlsplit, parse_qs
     if not isinstance(url, str) or len(url) > 2048:

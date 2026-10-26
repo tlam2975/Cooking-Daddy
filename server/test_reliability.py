@@ -93,6 +93,37 @@ class ReliabilityTests(unittest.TestCase):
         self.assertNotIn('diagnostics', response.get_data(as_text=True))
         self.assertEqual(self.quota.snapshot('A', 1)['remaining'], 1)
 
+    def test_import_uses_captions_sent_by_the_app_without_fetching(self):
+        captions = 'crack two eggs into a bowl and whisk them with a pinch of salt'
+        with patch.object(main.gemini_service, 'generate', return_value=json.dumps(self.recipe)) as generate, \
+             patch.object(main, 'get_youtube_transcript') as fetch:
+            response = self.client.post('/api/generate-from-url', json={
+                'url': 'https://youtu.be/abcdefghijk', 'transcript': captions + ' x' * 20000})
+        self.assertEqual(response.status_code, 200)
+        fetch.assert_not_called()
+        prompt = generate.call_args.args[0]
+        self.assertIn(captions, prompt)
+        self.assertLess(len(prompt), 30000 + 5000)
+
+    def test_import_fetches_when_app_captions_are_missing_or_too_short(self):
+        for body in ({}, {'transcript': 'hi'}, {'transcript': ['not', 'text']}):
+            with self.subTest(body=body), \
+                 patch.object(main.gemini_service, 'generate', return_value=json.dumps(self.recipe)), \
+                 patch.object(main, 'get_youtube_transcript', return_value='serve two people') as fetch, \
+                 patch.object(main, 'quota_store', MemoryQuota()):
+                response = self.client.post('/api/generate-from-url', json={'url': 'https://youtu.be/abcdefghijk', **body})
+                self.assertEqual(response.status_code, 200)
+                fetch.assert_called_once()
+
+    def test_no_recipe_flag_wins_even_when_other_fields_are_empty(self):
+        reply = {**self.recipe, 'name': '', 'ingredients': [], 'error': 'Transcript does not contain a recipe'}
+        with patch.object(main.gemini_service, 'generate', return_value=json.dumps(reply)), \
+             patch.object(main, 'get_youtube_transcript', return_value='never gonna give you up'):
+            response = self.client.post('/api/generate-from-url', json={'url': 'https://youtu.be/abcdefghijk'})
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json['error_code'], 'ai_not_a_recipe')
+        self.assertEqual(self.quota.snapshot('A', 1)['remaining'], 1)
+
     def test_import_failure_is_logged_with_cause(self):
         with patch.object(main, 'get_youtube_transcript', side_effect=RuntimeError('blocked')), \
              self.assertLogs(main.app.logger, 'WARNING') as logs:

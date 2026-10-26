@@ -14,7 +14,7 @@ from prompts import (
     build_smart_prompt,
     build_prompt_from_URL,
 )
-from youtube_service import get_youtube_transcript, canonical_youtube_url, youtube_thumbnail
+from youtube_service import get_youtube_transcript, canonical_youtube_url, youtube_thumbnail, client_transcript
 from service import SmartRecipeService
 from nutrition_service import NutritionLookupUnavailable, NutritionService
 from dashboard_service import DashboardService
@@ -149,6 +149,17 @@ def is_gemini_error(parsed):
     return isinstance(parsed, dict) and 'error' in parsed and 'steps' not in parsed
 
 
+def _no_recipe_reason(text):
+    """Gemini's "no recipe" flag, read before validation: with the flag set it
+    often leaves required fields empty, which would fail as an invalid recipe."""
+    try:
+        parsed = json.loads(text)
+    except ValueError:
+        return ''
+    reason = parsed.get('error') if isinstance(parsed, dict) else None
+    return reason.strip() if isinstance(reason, str) else ''
+
+
 def generate_recipe_response(prompt, context=None, source_url=None, thinking_budget=None):
     """All generation uses one schema and one durable account entitlement."""
     if not gemini_service.clients:
@@ -160,8 +171,11 @@ def generate_recipe_response(prompt, context=None, source_url=None, thinking_bud
         reservation, remaining = quota_store.reserve(g.user_id, DAILY_LIMIT)
         text = gemini_service.generate(prompt, response_schema=RecipeOutput.model_json_schema(),
                                        thinking_budget=thinking_budget)
-        recipe = RecipeOutput.model_validate_json(clean_json_response(text)).model_dump()
-        reason = (recipe.pop('error', None) or '').strip()
+        cleaned = clean_json_response(text)
+        reason = _no_recipe_reason(cleaned)
+        if not reason:
+            recipe = RecipeOutput.model_validate_json(cleaned).model_dump()
+            reason = (recipe.pop('error', None) or '').strip()
         if reason:
             # Not committed, so the reservation is released below.
             app.logger.info('Gemini found no recipe: %s', reason[:200])
@@ -183,9 +197,9 @@ def generate_recipe_response(prompt, context=None, source_url=None, thinking_bud
         return jsonify(success=False, error='Recipe generation is unavailable', error_code='ai_not_configured'), 503
     except ValueError:
         return jsonify(success=False, error='AI returned an invalid recipe', error_code='ai_invalid_recipe'), 422
-    except GeminiRequestError as error:
-        code = 'ai_quota_error' if error.status_code == 429 else 'ai_generation_error'
-        return jsonify(success=False, error='Recipe generation is unavailable', error_code=code), (429 if error.status_code == 429 else 503)
+    except GeminiRequestError:
+        # Gemini's own rate limit is not the user's daily quota; report it as busy.
+        return jsonify(success=False, error='Recipe generation is unavailable', error_code='ai_generation_error'), 503
     except Exception:
         app.logger.exception('Recipe generation failed')
         return jsonify(success=False, error='Recipe generation is unavailable', error_code='ai_generation_error'), 503
@@ -361,8 +375,11 @@ def generate_from_url():
             return jsonify(success=False, error_code='ai_quota_error'), 429
     except QuotaUnavailable:
         return jsonify(success=False, error_code='ai_quota_unavailable'), 503
+    # YouTube blocks caption requests from cloud IPs like Vercel's, so the app
+    # fetches captions on the phone and sends them. Fetch here only as a fallback.
+    transcript = client_transcript(data.get('transcript'))
     try:
-        transcript = get_youtube_transcript(url)
+        transcript = transcript or get_youtube_transcript(url)
     except Exception as error:
         # Provider diagnostics belong in server logs, not mobile error copy.
         app.logger.warning('YouTube transcript import unavailable: %s: %s',

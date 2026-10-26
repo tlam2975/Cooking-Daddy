@@ -92,11 +92,11 @@ class RemixTests(unittest.TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json['error_code'], 'ai_not_configured')
 
-    def test_provider_quota_is_distinguished_from_a_recipe_error(self):
+    def test_provider_rate_limit_is_reported_as_busy_not_as_daily_quota(self):
         with patch.object(main.gemini_service, 'generate', side_effect=GeminiRequestError(429)):
             response = self.post()
-        self.assertEqual(response.status_code, 429)
-        self.assertEqual(response.json['error_code'], 'ai_quota_error')
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json['error_code'], 'ai_generation_error')
 
     def test_smart_generate_and_remix_share_the_schema_and_response_shape(self):
         with patch.object(main.gemini_service, 'generate', return_value=json.dumps(self.generated)) as generate:

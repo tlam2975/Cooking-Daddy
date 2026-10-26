@@ -41,6 +41,10 @@ Rules:
 - Ingredient "unit" must be one of: g, kg, ml, l, tsp, tbsp, cup, pcs, or null.
 - Tool "name" is required; "quantity" may be null when unknown.
 - Step "instruction" and "whatToLookFor" are required.
+- Write steps for a beginner: each step is one stage of the cooking (for example: cut the vegetables; mix the sauce; fry the beef), in one to three short sentences. Don't pack unrelated tasks into one step, and don't split one stage into tiny steps. Most recipes need 5 to 12 steps.
+- Split preparation into a few steps instead of one long prep step.
+- Put tips and reasons in "notes", not in "instruction".
+- When a step names an amount, write the number directly followed by its unit (for example "250 g beef", "2 tbsp fish sauce").
 - Step "activityType" is required. Choose the step's primary action from: prep, chop, mix, heat, bake, wait, timer, plate, complete.
 - Prefer the specific cooking action over timer; use timer only when waiting for time is the step's main action.
 - Step "time" is saved in seconds as an integer, or null when unknown.
@@ -50,13 +54,23 @@ Rules:
 """
 
 
+SESSION_LENGTHS = {
+    'short': 'short - at most 30 minutes in total, including prep',
+    'long': 'long - 30 to 90 minutes in total, including prep',
+}
+
+
+def _session_length(value):
+    return SESSION_LENGTHS.get(value, SESSION_LENGTHS['short'])
+
+
 def build_prompt(ingredients, tools=None, session_length='normal', difficulty='normal', dish=None):
     tools_str = f", tools: {tools}" if tools else ""
     dish_str = dish if dish else "a meal"
 
     prompt = f"""Generate a recipe for {dish_str} using these ingredients: {ingredients}{tools_str}.
 
-Session length: {session_length}
+Session length: {_session_length(session_length)}
 Difficulty: {difficulty}
 
 {_JSON_RULES}
@@ -82,7 +96,7 @@ def build_smart_prompt(
     prompt = f"""Generate a recipe for {dish_str} using ingredients: {ingredients}{tools_str}.
 
 Requirements:
-- Session length: {session_length}
+- Session length: {_session_length(session_length)}
 - Difficulty: {difficulty}
 - Write the recipe text in {'Vietnamese' if language == 'vi' else 'English'}; keep category, tags, and unit codes in English.
 
@@ -152,6 +166,7 @@ Rules:
 - Only use information explicitly present in the transcript.
 - Do not infer or add missing data.
 - Use metric units if provided; do not convert if absent.
+- You may split a long spoken instruction into shorter steps, in the same order and without adding new actions. Merge small consecutive actions from the same stage into one step.
 - If the transcript does not describe cooking a specific dish, you MUST set "error" to "Transcript does not contain a recipe or cooking instructions". Never fill name, ingredients or steps with placeholders such as "Unknown" or "No Recipe", and do not make up a recipe.
 
 {_JSON_RULES}
