@@ -108,7 +108,8 @@ Time Context:
         prompt += "- Suggest energizing breakfast foods\n"
     elif meal_time == "lunch":
         prompt += "- Suggest moderate portions and a balanced meal\n"
-    elif current_hour >= 20:
+    elif current_hour >= 20 and session_length != 'long':
+        # A user who picked "Long" late at night still gets a long recipe.
         prompt += "- Late night cooking: suggest quick recipes, max 15 minutes\n"
         prompt += "- Keep portions light and easy to digest\n"
     elif meal_time == "dinner":
